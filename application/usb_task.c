@@ -24,12 +24,16 @@
 #include <stdarg.h>
 #include "string.h"
 
+#include "bsp_usart.h"
+
 #include "detect_task.h"
 #include "voltage_task.h"
 #include "CAN_receive.h"
 
 
 static void usb_printf(const char *fmt,...);
+
+#define DEBUG_LOG_UART1 1
 
 static uint8_t usb_buf[512];
 static const char status[2][7] = {"OK", "ERROR!"};
@@ -39,7 +43,9 @@ const error_t *error_list_usb_local;
 
 void usb_task(void const * argument)
 {
+#if !DEBUG_LOG_UART1
     MX_USB_DEVICE_Init();
+#endif
     error_list_usb_local = get_error_list_point();
 
 
@@ -114,6 +120,12 @@ static void usb_printf(const char *fmt,...)
 
     va_end(ap);
 
-
-    CDC_Transmit_FS(usb_buf, len);
+#if DEBUG_LOG_UART1
+  if (len > 0)
+  {
+    usart1_tx_dma_enable(usb_buf, len);
+  }
+#else
+  CDC_Transmit_FS(usb_buf, len);
+#endif
 }
