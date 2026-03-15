@@ -1,0 +1,15 @@
+#ifndef BSP_FRIC_H
+#define BSP_FRIC_H
+#include "struct_typedef.h"
+
+#define FRIC_UP 1400
+#define FRIC_DOWN 1900
+#define FRIC_OFF 1000
+
+extern void fric_off(void);
+extern void fric1_on(uint16_t cmd);
+extern void fric2_on(uint16_t cmd);
+extern void fric3_on(uint16_t cmd);
+extern void fric4_on(uint16_t cmd);
+
+#endif
