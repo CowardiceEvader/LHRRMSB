@@ -22,13 +22,16 @@
 #include "referee.h"
 #include "bsp_rc.h"
 #include "stdlib.h"
-//#include "bsp_usart.h"
+#include "bsp_usart.h"
+
+#define DEBUG_UART1_RX_FORWARD_TO_UART6 1
 
 extern UART_HandleTypeDef huart1;
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern RC_ctrl_t rc_ctrl;
 
 uint8_t  usart1_dma_rx_buffer[USART1_DMA_BUF_NUM];
+static uint8_t uart1_rx_forward_buf[RX_DATA_LEN];
 //uint8_t  usart1_dma_tx_buffer[2][USART1_DMA_BUF_NUM];
 
 uint16_t HP = 0;
@@ -189,6 +192,10 @@ void Usart1Receive_IDLE(void)
 
 		if(this_time_data_rx_len == RX_DATA_LEN)
             {
+            #if DEBUG_UART1_RX_FORWARD_TO_UART6
+            memcpy(uart1_rx_forward_buf, usart1_dma_rx_buffer, RX_DATA_LEN);
+            usart6_tx_dma_enable(uart1_rx_forward_buf, RX_DATA_LEN);
+            #endif
 			memcpy(sbus_rx_buf, usart1_dma_rx_buffer, 18);
             sbus_to_rc(sbus_rx_buf[0], &rc_ctrl);
             detect_hook(DBUS_TOE);
