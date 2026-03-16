@@ -23,10 +23,9 @@
 #include "bsp_rc.h"
 #include "stdlib.h"
 #include "bsp_usart.h"
-#include "usbd_cdc_if.h"
 
 #define DEBUG_UART1_RX_FORWARD_TO_UART6 1
-#define DEBUG_UART1_RX_FORWARD_TO_CDC 1
+#define DEBUG_UART1_RX_FORWARD_TO_CDC 0
 
 extern UART_HandleTypeDef huart1;
 extern DMA_HandleTypeDef hdma_usart1_rx;

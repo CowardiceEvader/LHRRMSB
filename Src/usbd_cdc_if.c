@@ -69,7 +69,7 @@
 /* It's up to user to redefine and/or remove those define */
 #define APP_RX_DATA_SIZE  2048
 #define APP_TX_DATA_SIZE  2048
-#define CDC_TO_UART6_BRIDGE 1
+#define CDC_TO_UART6_BRIDGE 0
 /* USER CODE END PRIVATE_DEFINES */
 
 /**
