@@ -23,8 +23,10 @@
 #include "bsp_rc.h"
 #include "stdlib.h"
 #include "bsp_usart.h"
+#include "usbd_cdc_if.h"
 
 #define DEBUG_UART1_RX_FORWARD_TO_UART6 1
+#define DEBUG_UART1_RX_FORWARD_TO_CDC 1
 
 extern UART_HandleTypeDef huart1;
 extern DMA_HandleTypeDef hdma_usart1_rx;
@@ -192,9 +194,12 @@ void Usart1Receive_IDLE(void)
 
 		if(this_time_data_rx_len == RX_DATA_LEN)
             {
+        memcpy(uart1_rx_forward_buf, usart1_dma_rx_buffer, RX_DATA_LEN);
             #if DEBUG_UART1_RX_FORWARD_TO_UART6
-            memcpy(uart1_rx_forward_buf, usart1_dma_rx_buffer, RX_DATA_LEN);
             usart6_tx_dma_enable(uart1_rx_forward_buf, RX_DATA_LEN);
+            #endif
+            #if DEBUG_UART1_RX_FORWARD_TO_CDC
+            CDC_Transmit_FS(uart1_rx_forward_buf, RX_DATA_LEN);
             #endif
 			memcpy(sbus_rx_buf, usart1_dma_rx_buffer, 18);
             sbus_to_rc(sbus_rx_buf[0], &rc_ctrl);
