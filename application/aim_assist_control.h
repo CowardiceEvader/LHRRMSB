@@ -57,6 +57,7 @@ typedef struct
 
 extern void Usart1Receive_IDLE(void);
 extern void aim_assistant_control_init(void);
+extern void aim_assist_force_test_frame_once(void);
 extern const get_data_t *get_aim_assistant_control_point(void);
 extern get_data_t get_data;
 extern void UART_SendString(UART_HandleTypeDef *huart, uint8_t *str);

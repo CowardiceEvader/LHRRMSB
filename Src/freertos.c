@@ -38,6 +38,7 @@
 #include "usb_task.h"
 #include "voltage_task.h"
 #include "servo_task.h"
+#include "aim_assist_control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -207,7 +208,8 @@ __weak void test_task(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    aim_assist_force_test_frame_once();
+    osDelay(10);
   }
   /* USER CODE END test_task */
 }

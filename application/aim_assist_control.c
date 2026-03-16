@@ -26,6 +26,7 @@
 
 #define DEBUG_UART1_RX_FORWARD_TO_UART6 1
 #define DEBUG_UART1_RX_FORWARD_TO_CDC 0
+#define AIM_ASSIST_FORCE_TEST_FRAME 1
 
 extern UART_HandleTypeDef huart1;
 extern DMA_HandleTypeDef hdma_usart1_rx;
@@ -51,6 +52,12 @@ const gimbal_control_t *data;
 int assistant_flag;
 unsigned char pitch_bit,yaw_bit;
 
+static const uint8_t aim_assist_test_frame[RX_DATA_LEN] =
+{
+    0x00, 0x64, 0xA0, 0x00, 0x01, 0xF8, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04
+};
+
 void aim_assistant_control_init(void)
 {
     assistant_flag = 0;
@@ -59,6 +66,27 @@ void aim_assistant_control_init(void)
     HAL_UART_Receive_DMA(&huart1, usart1_dma_rx_buffer, USART1_DMA_BUF_NUM);
     data = get_gimbal_control_point();
 //	Assitant_Init(usart1_dma_rx_buffer[0],usart1_dma_rx_buffer[1],USART1_DMA_BUF_NUM);
+}
+
+void aim_assist_force_test_frame_once(void)
+{
+#if AIM_ASSIST_FORCE_TEST_FRAME
+    memcpy(uart1_rx_forward_buf, aim_assist_test_frame, RX_DATA_LEN);
+#if DEBUG_UART1_RX_FORWARD_TO_UART6
+    usart6_tx_dma_enable(uart1_rx_forward_buf, RX_DATA_LEN);
+#endif
+    memcpy(sbus_rx_buf, aim_assist_test_frame, RX_DATA_LEN);
+    sbus_to_rc(sbus_rx_buf[0], &rc_ctrl);
+    detect_hook(DBUS_TOE);
+    if (rc_ctrl.rc.s[0] != RC_SW_UP && rc_ctrl.rc.s[0] != RC_SW_MID && rc_ctrl.rc.s[0] != RC_SW_DOWN)
+    {
+        rc_ctrl.rc.s[0] = RC_SW_UP;
+    }
+    if (rc_ctrl.rc.s[1] != RC_SW_UP && rc_ctrl.rc.s[1] != RC_SW_MID && rc_ctrl.rc.s[1] != RC_SW_DOWN)
+    {
+        rc_ctrl.rc.s[1] = RC_SW_UP;
+    }
+#endif
 }
 
 //void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
