@@ -22,5 +22,7 @@
 
 
 extern void usb_task(void const * argument);
+extern void usb_printf(const char *fmt,...);
 
 #endif
+

@@ -149,7 +149,7 @@ int main(void)
     can_filter_init();
     delay_init();
     cali_param_init();
-  //    remote_control_init();
+    //remote_control_init();
 	
 	
     usart1_tx_dma_init();

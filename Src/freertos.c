@@ -38,7 +38,6 @@
 #include "usb_task.h"
 #include "voltage_task.h"
 #include "servo_task.h"
-#include "aim_assist_control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -153,11 +152,11 @@ void MX_FREERTOS_Init(void) {
     osThreadDef(cali, calibrate_task, osPriorityNormal, 0, 512);
     calibrate_tast_handle = osThreadCreate(osThread(cali), NULL);
 
-    osThreadDef(ChassisTask, chassis_task, osPriorityAboveNormal, 0, 512);
-    chassisTaskHandle = osThreadCreate(osThread(ChassisTask), NULL);
+//    osThreadDef(ChassisTask, chassis_task, osPriorityAboveNormal, 0, 512);
+//    chassisTaskHandle = osThreadCreate(osThread(ChassisTask), NULL);
 
-  osThreadDef(DETECT, detect_task, osPriorityNormal, 0, 256);
-  detect_handle = osThreadCreate(osThread(DETECT), NULL);
+//    osThreadDef(DETECT, detect_task, osPriorityNormal, 0, 256);
+//    detect_handle = osThreadCreate(osThread(DETECT), NULL);
 
     osThreadDef(gimbalTask, gimbal_task, osPriorityHigh, 0, 512);
     gimbalTaskHandle = osThreadCreate(osThread(gimbalTask), NULL);
@@ -208,8 +207,7 @@ __weak void test_task(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    aim_assist_force_test_frame_once();
-    osDelay(10);
+    osDelay(1);
   }
   /* USER CODE END test_task */
 }

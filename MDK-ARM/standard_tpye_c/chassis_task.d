@@ -15,7 +15,7 @@ standard_tpye_c\chassis_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ha
 standard_tpye_c\chassis_task.o: ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h
 standard_tpye_c\chassis_task.o: ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h
 standard_tpye_c\chassis_task.o: ../Drivers/CMSIS/Include/core_cm4.h
-standard_tpye_c\chassis_task.o: D:\UV4\ARM\ARMCC\Bin\..\include\stdint.h
+standard_tpye_c\chassis_task.o: D:\keil\ARM\ARMCC\Bin\..\include\stdint.h
 standard_tpye_c\chassis_task.o: ../Drivers/CMSIS/Include/cmsis_version.h
 standard_tpye_c\chassis_task.o: ../Drivers/CMSIS/Include/cmsis_compiler.h
 standard_tpye_c\chassis_task.o: ../Drivers/CMSIS/Include/cmsis_armcc.h
@@ -23,7 +23,7 @@ standard_tpye_c\chassis_task.o: ../Drivers/CMSIS/Include/mpu_armv7.h
 standard_tpye_c\chassis_task.o: ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h
 standard_tpye_c\chassis_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h
 standard_tpye_c\chassis_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h
-standard_tpye_c\chassis_task.o: D:\UV4\ARM\ARMCC\Bin\..\include\stddef.h
+standard_tpye_c\chassis_task.o: D:\keil\ARM\ARMCC\Bin\..\include\stddef.h
 standard_tpye_c\chassis_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h
 standard_tpye_c\chassis_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_exti.h
 standard_tpye_c\chassis_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h
@@ -70,8 +70,8 @@ standard_tpye_c\chassis_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/inclu
 standard_tpye_c\chassis_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
 standard_tpye_c\chassis_task.o: ..\components\algorithm\Include\arm_math.h
 standard_tpye_c\chassis_task.o: ../Drivers/CMSIS/Include/core_cm4.h
-standard_tpye_c\chassis_task.o: D:\UV4\ARM\ARMCC\Bin\..\include\string.h
-standard_tpye_c\chassis_task.o: D:\UV4\ARM\ARMCC\Bin\..\include\math.h
+standard_tpye_c\chassis_task.o: D:\keil\ARM\ARMCC\Bin\..\include\string.h
+standard_tpye_c\chassis_task.o: D:\keil\ARM\ARMCC\Bin\..\include\math.h
 standard_tpye_c\chassis_task.o: ..\application\detect_task.h
 standard_tpye_c\chassis_task.o: ..\application\INS_task.h
 standard_tpye_c\chassis_task.o: ..\application\chassis_power_control.h
