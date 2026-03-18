@@ -239,9 +239,10 @@ typedef struct
 {
     const RC_ctrl_t *gimbal_rc_ctrl;
 	const RC_ctrl_t *aim_assist_ctrl;
-	
+
 	const ros_aim_data_t *gimbal_assist_ctrl;
 	const auto_aim_output_t *auto_aim_output;
+	const ros_nav_cmd_t *ros_nav_cmd;
 	
     const fp32 *gimbal_INT_angle_point;
     const fp32 *gimbal_INT_gyro_point;

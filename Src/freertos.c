@@ -76,14 +76,12 @@ osThreadId auto_aim_task_handle;
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
-osThreadId testHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
    
 /* USER CODE END FunctionPrototypes */
 
-void test_task(void const * argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -147,17 +145,14 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* definition and creation of test */
-  osThreadDef(test, test_task, osPriorityNormal, 0, 128);
-  testHandle = osThreadCreate(osThread(test), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
     osThreadDef(cali, calibrate_task, osPriorityNormal, 0, 512);
     calibrate_tast_handle = osThreadCreate(osThread(cali), NULL);
 
-//    osThreadDef(ChassisTask, chassis_task, osPriorityAboveNormal, 0, 512);
-//    chassisTaskHandle = osThreadCreate(osThread(ChassisTask), NULL);
+   osThreadDef(ChassisTask, chassis_task, osPriorityAboveNormal, 0, 512);
+   chassisTaskHandle = osThreadCreate(osThread(ChassisTask), NULL);
 
   osThreadDef(DETECT, detect_task, osPriorityNormal, 0, 256);
   detect_handle = osThreadCreate(osThread(DETECT), NULL);
@@ -180,8 +175,8 @@ void MX_FREERTOS_Init(void) {
     referee_usart_task_handle = osThreadCreate(osThread(REFEREE), NULL);
 
 
-    osThreadDef(USBTask, usb_task, osPriorityNormal, 0, 128);
-    usb_task_handle = osThreadCreate(osThread(USBTask), NULL);
+    // osThreadDef(USBTask, usb_task, osPriorityNormal, 0, 128);
+    // usb_task_handle = osThreadCreate(osThread(USBTask), NULL);
 
     osThreadDef(BATTERY_VOLTAGE, battery_voltage_task, osPriorityNormal, 0, 128);
     battery_voltage_handle = osThreadCreate(osThread(BATTERY_VOLTAGE), NULL);
@@ -200,26 +195,6 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_test_task */
-/**
-  * @brief  Function implementing the test thread.
-  * @param  argument: Not used 
-  * @retval None
-  */
-/* USER CODE END Header_test_task */
-__weak void test_task(void const * argument)
-{
-  /* init code for USB_DEVICE */
-  MX_USB_DEVICE_Init();
-
-  /* USER CODE BEGIN test_task */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END test_task */
-}
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */

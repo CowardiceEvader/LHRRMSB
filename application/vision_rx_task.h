@@ -23,7 +23,7 @@
 
 /* --- ROS -> STM32 (downstream) --- */
 #define CMD_AIM_DATA            0x01U   /* 14 bytes payload */
-#define CMD_NAV_DATA            0x02U   /* 12 bytes payload (reserved) */
+#define CMD_NAV_DATA            0x02U   /* 21 bytes payload */
 #define CMD_HEARTBEAT           0x10U   /*  0 bytes payload */
 
 /* --- STM32 -> ROS (upstream) --- */
@@ -60,13 +60,19 @@ typedef struct
     uint8_t     reserved[3];
 } ros_aim_data_t;
 
-/* --- CMD_NAV_DATA (0x02) payload: 12 bytes (reserved) --- */
+/* --- CMD_NAV_DATA (0x02) payload: 21 bytes --- */
+#define NAV_FLAG_CHASSIS_VALID    0x01U
+#define NAV_FLAG_GIMBAL_ABS_VALID 0x02U
+
 typedef struct
 {
-    float vx;   /* m/s  */
-    float vy;   /* m/s  */
-    float vz;   /* rad/s */
-} ros_nav_data_t;
+    float    vx;            /* m/s, chassis forward/backward */
+    float    vy;            /* m/s, chassis left/right */
+    float    vz;            /* rad/s, chassis rotation */
+    float    yaw_abs;       /* rad, gimbal yaw absolute angle */
+    float    pitch_abs;     /* rad, gimbal pitch absolute angle */
+    uint8_t  nav_ctrl_flags;/* bit0: chassis_valid, bit1: gimbal_abs_valid */
+} ros_nav_cmd_t;
 
 /* --- CMD_STATUS_REPORT (0x81) payload: 14 bytes --- */
 typedef struct
@@ -85,5 +91,6 @@ typedef ros_aim_data_t get_data_t;
 /* ======================== public API ======================== */
 extern void              vision_rx_task(void const *argument);
 extern const ros_aim_data_t *get_vision_data_point(void);
+extern const ros_nav_cmd_t  *get_ros_nav_cmd_point(void);
 
 #endif /* VISION_RX_TASK_H */

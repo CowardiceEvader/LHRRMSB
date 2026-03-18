@@ -37,6 +37,7 @@ static uint8_t   vision_fifo_buf[VISION_FIFO_BUF_LENGTH];
 
 /* ---------- data instances ---------- */
 static ros_aim_data_t ros_aim_data = {0};
+static ros_nav_cmd_t  ros_nav_cmd  = {0};
 
 /* ---------- diagnostics ---------- */
 typedef struct
@@ -157,9 +158,15 @@ static void ros_handle_frame(uint8_t cmd, const uint8_t *payload, uint8_t len)
         detect_hook(VISION_TOE);
         diag.frame_ok_count++;
     }
-    else if (cmd == CMD_NAV_DATA && len == 12)
+    else if (cmd == CMD_NAV_DATA && len == 21)
     {
-        /* reserved for future use */
+        memcpy(&ros_nav_cmd.vx,        &payload[0],  4);
+        memcpy(&ros_nav_cmd.vy,        &payload[4],  4);
+        memcpy(&ros_nav_cmd.vz,        &payload[8],  4);
+        memcpy(&ros_nav_cmd.yaw_abs,   &payload[12], 4);
+        memcpy(&ros_nav_cmd.pitch_abs, &payload[16], 4);
+        ros_nav_cmd.nav_ctrl_flags = payload[20];
+
         detect_hook(VISION_TOE);
         diag.frame_ok_count++;
     }
@@ -248,6 +255,14 @@ static void ros_parse_fifo(void)
 const ros_aim_data_t *get_vision_data_point(void)
 {
     return &ros_aim_data;
+}
+
+/* ================================================================
+ *  get_ros_nav_cmd_point — accessor for chassis/gimbal consumers
+ * ================================================================ */
+const ros_nav_cmd_t *get_ros_nav_cmd_point(void)
+{
+    return &ros_nav_cmd;
 }
 
 /* ================================================================

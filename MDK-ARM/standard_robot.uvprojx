@@ -883,12 +883,6 @@
               <FileName>shoot.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\application\shoot.c</FilePath>
-            </File>
-            <File>
-              <FileName>test_task.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\application\test_task.c</FilePath>
-            </File>
             <File>
               <FileName>usb_task.c</FileName>
               <FileType>1</FileType>

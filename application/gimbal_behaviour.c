@@ -263,6 +263,8 @@ static void gimbal_relative_angle_control(fp32 *yaw, fp32 *pitch, gimbal_control
 
 static void gimbal_aim_assist_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *gimbal_control_set);
 
+static void gimbal_ros_absolute_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *gimbal_control_set);
+
 /**
   * @brief          when gimbal behaviour mode is GIMBAL_MOTIONLESS, the function is called
   *                 and gimbal control mode is encode mode. 
@@ -354,6 +356,11 @@ void gimbal_behaviour_mode_set(gimbal_control_t *gimbal_mode_set)
 		 gimbal_mode_set->gimbal_yaw_motor.gimbal_motor_mode = GIMBAL_MOTOR_ENCONDE;
         gimbal_mode_set->gimbal_pitch_motor.gimbal_motor_mode = GIMBAL_MOTOR_ENCONDE;
 	}
+    else if (gimbal_behaviour == GIMBAL_ROS_ABSOLUTE)
+    {
+        gimbal_mode_set->gimbal_yaw_motor.gimbal_motor_mode = GIMBAL_MOTOR_ENCONDE;
+        gimbal_mode_set->gimbal_pitch_motor.gimbal_motor_mode = GIMBAL_MOTOR_ENCONDE;
+    }
     else if (gimbal_behaviour == GIMBAL_MOTIONLESS)
     {
         gimbal_mode_set->gimbal_yaw_motor.gimbal_motor_mode = GIMBAL_MOTOR_ENCONDE;
@@ -411,6 +418,10 @@ void gimbal_behaviour_control_set(fp32 *add_yaw, fp32 *add_pitch, gimbal_control
     else if (gimbal_behaviour == GIMBAL_RELATIVE_ANGLE)
     {
         gimbal_relative_angle_control(add_yaw, add_pitch, gimbal_control_set);
+    }
+    else if (gimbal_behaviour == GIMBAL_ROS_ABSOLUTE)
+    {
+        gimbal_ros_absolute_control(add_yaw, add_pitch, gimbal_control_set);
     }
     else if (gimbal_behaviour == GIMBAL_MOTIONLESS)
     {
@@ -483,31 +494,26 @@ static void gimbal_behavour_set(gimbal_control_t *gimbal_mode_set)
         return;
     }
     //in cali mode, return
-    //У׼��Ϊ��return ��������������ģʽ
     if (gimbal_behaviour == GIMBAL_CALI && gimbal_mode_set->gimbal_cali.step != GIMBAL_CALI_END_STEP)
     {
         return;
     }
-    //if other operate make step change to start, means enter cali mode
-    //����ⲿʹ��У׼�����0 ��� start�������У׼ģʽ
-    if (gimbal_mode_set->gimbal_cali.step == GIMBAL_CALI_START_STEP && !toe_is_error(DBUS_TOE))
+    if (gimbal_mode_set->gimbal_cali.step == GIMBAL_CALI_START_STEP)
     {
         gimbal_behaviour = GIMBAL_CALI;
         return;
     }
 
     //init mode, judge if gimbal is in middle place
-    //��ʼ��ģʽ�ж��Ƿ񵽴���ֵλ��
     if (gimbal_behaviour == GIMBAL_INIT)
     {
         static uint16_t init_time = 0;
         static uint16_t init_stop_time = 0;
         init_time++;
-        
+
         if ((fabs(gimbal_mode_set->gimbal_yaw_motor.relative_angle - INIT_YAW_SET) < GIMBAL_INIT_ANGLE_ERROR &&
              fabs(gimbal_mode_set->gimbal_pitch_motor.absolute_angle - INIT_PITCH_SET) < GIMBAL_INIT_ANGLE_ERROR))
         {
-            
             if (init_stop_time < GIMBAL_INIT_STOP_TIME)
             {
                 init_stop_time++;
@@ -515,16 +521,14 @@ static void gimbal_behavour_set(gimbal_control_t *gimbal_mode_set)
         }
         else
         {
-            
             if (init_time < GIMBAL_INIT_TIME)
             {
                 init_time++;
             }
         }
 
-        //������ʼ�����ʱ�䣬�����Ѿ��ȶ�����ֵһ��ʱ�䣬�˳���ʼ��״̬���ش��µ������ߵ���
-        if (init_time < GIMBAL_INIT_TIME && init_stop_time < GIMBAL_INIT_STOP_TIME &&
-            !switch_is_down(gimbal_mode_set->gimbal_rc_ctrl->rc.s[GIMBAL_MODE_CHANNEL]) && !toe_is_error(DBUS_TOE))
+        /* exit init when: timeout OR settled at center */
+        if (init_time < GIMBAL_INIT_TIME && init_stop_time < GIMBAL_INIT_STOP_TIME)
         {
             return;
         }
@@ -535,36 +539,26 @@ static void gimbal_behavour_set(gimbal_control_t *gimbal_mode_set)
         }
     }
 
-    //���ؿ��� ��̨״̬
-    if (switch_is_down(gimbal_mode_set->gimbal_rc_ctrl->rc.s[GIMBAL_MODE_CHANNEL]))
+    /* ===== ROS autonomous mode selection (no RC dependency) ===== */
+    /* Priority 1: auto-aim has valid target -> AIM_ASSIST */
+    if (gimbal_mode_set->auto_aim_output != NULL &&
+        gimbal_mode_set->auto_aim_output->aim_valid)
     {
-        gimbal_behaviour = GIMBAL_ZERO_FORCE;
+        gimbal_behaviour = GIMBAL_AIM_ASSIST;
     }
-    else if (switch_is_mid(gimbal_mode_set->gimbal_rc_ctrl->rc.s[GIMBAL_MODE_CHANNEL]))
+    /* Priority 2: ROS nav has gimbal absolute angle command */
+    else if (gimbal_mode_set->ros_nav_cmd != NULL &&
+             (gimbal_mode_set->ros_nav_cmd->nav_ctrl_flags & NAV_FLAG_GIMBAL_ABS_VALID))
     {
-//        gimbal_behaviour = GIMBAL_RELATIVE_ANGLE;
-		if (gimbal_mode_set->gimbal_rc_ctrl->key.v & KEY_PRESSED_OFFSET_B)
-        {
-            gimbal_behaviour = GIMBAL_AIM_ASSIST;
-        }
-        else
-        {
-            gimbal_behaviour = GIMBAL_RELATIVE_ANGLE;
-        }
+        gimbal_behaviour = GIMBAL_ROS_ABSOLUTE;
     }
-    else if (switch_is_up(gimbal_mode_set->gimbal_rc_ctrl->rc.s[GIMBAL_MODE_CHANNEL]))
+    /* Priority 3: hold current position */
+    else
     {
-//        gimbal_behaviour = GIMBAL_ABSOLUTE_ANGLE;
-		gimbal_behaviour = GIMBAL_RELATIVE_ANGLE;
+        gimbal_behaviour = GIMBAL_RELATIVE_ANGLE;
     }
 
-    if( toe_is_error(DBUS_TOE))
-    {
-        gimbal_behaviour = GIMBAL_ZERO_FORCE;
-    }
-
-    //enter init mode
-    //�жϽ���init״̬��
+    //enter init mode when first leaving ZERO_FORCE
     {
         static gimbal_behaviour_e last_gimbal_behaviour = GIMBAL_ZERO_FORCE;
         if (last_gimbal_behaviour == GIMBAL_ZERO_FORCE && gimbal_behaviour != GIMBAL_ZERO_FORCE)
@@ -573,9 +567,6 @@ static void gimbal_behavour_set(gimbal_control_t *gimbal_mode_set)
         }
         last_gimbal_behaviour = gimbal_behaviour;
     }
-
-
-
 }
 
 /**
@@ -736,49 +727,9 @@ static void gimbal_absolute_angle_control(fp32 *yaw, fp32 *pitch, gimbal_control
         return;
     }
 
-    static int16_t yaw_channel = 0, pitch_channel = 0;
-
-    rc_deadband_limit(gimbal_control_set->gimbal_rc_ctrl->rc.ch[YAW_CHANNEL], yaw_channel, RC_DEADBAND);
-    rc_deadband_limit(gimbal_control_set->gimbal_rc_ctrl->rc.ch[PITCH_CHANNEL], pitch_channel, RC_DEADBAND);
-
-    *yaw = yaw_channel * YAW_RC_SEN - gimbal_control_set->gimbal_rc_ctrl->mouse.x * YAW_MOUSE_SEN;
-    *pitch = pitch_channel * PITCH_RC_SEN + gimbal_control_set->gimbal_rc_ctrl->mouse.y * PITCH_MOUSE_SEN;
-
-
-    {
-        static uint16_t last_turn_keyboard = 0;
-        static uint8_t gimbal_turn_flag = 0;
-        static fp32 gimbal_end_angle = 0.0f;
-
-        if ((gimbal_control_set->gimbal_rc_ctrl->key.v & TURN_KEYBOARD) && !(last_turn_keyboard & TURN_KEYBOARD))
-        {
-            if (gimbal_turn_flag == 0)
-            {
-                gimbal_turn_flag = 1;
-                //�����ͷ��Ŀ��ֵ
-                gimbal_end_angle = rad_format(gimbal_control_set->gimbal_yaw_motor.absolute_angle + PI);
-            }
-        }
-        last_turn_keyboard = gimbal_control_set->gimbal_rc_ctrl->key.v ;
-
-        if (gimbal_turn_flag)
-        {
-            //���Ͽ��Ƶ���ͷ��Ŀ��ֵ����ת����װ�����
-            if (rad_format(gimbal_end_angle - gimbal_control_set->gimbal_yaw_motor.absolute_angle) > 0.0f)
-            {
-                *yaw += TURN_SPEED;
-            }
-            else
-            {
-                *yaw -= TURN_SPEED;
-            }
-        }
-        //����pi ��180�㣩��ֹͣ
-        if (gimbal_turn_flag && fabs(rad_format(gimbal_end_angle - gimbal_control_set->gimbal_yaw_motor.absolute_angle)) < 0.01f)
-        {
-            gimbal_turn_flag = 0;
-        }
-    }
+    /* ROS autonomous: no RC/keyboard input */
+    *yaw = 0.0f;
+    *pitch = 0.0f;
 }
 
 
@@ -803,15 +754,9 @@ static void gimbal_relative_angle_control(fp32 *yaw, fp32 *pitch, gimbal_control
     {
         return;
     }
-    static int16_t yaw_channel = 0, pitch_channel = 0;
-
-    rc_deadband_limit(gimbal_control_set->gimbal_rc_ctrl->rc.ch[YAW_CHANNEL], yaw_channel, RC_DEADBAND);
-    rc_deadband_limit(gimbal_control_set->gimbal_rc_ctrl->rc.ch[PITCH_CHANNEL], pitch_channel, RC_DEADBAND);
-
-    *yaw = yaw_channel * YAW_RC_SEN - gimbal_control_set->gimbal_rc_ctrl->mouse.x * YAW_MOUSE_SEN;
-    *pitch = pitch_channel * PITCH_RC_SEN + gimbal_control_set->gimbal_rc_ctrl->mouse.y * PITCH_MOUSE_SEN;
-
-
+    /* ROS autonomous: hold current position, no RC input */
+    *yaw = 0.0f;
+    *pitch = 0.0f;
 }
 
 
@@ -840,12 +785,9 @@ static void gimbal_aim_assist_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *
     }
     else
     {
-        /* fallback: manual RC control */
-        static int16_t yaw_channel = 0, pitch_channel = 0;
-        rc_deadband_limit(gimbal_control_set->gimbal_rc_ctrl->rc.ch[YAW_CHANNEL], yaw_channel, RC_DEADBAND);
-        rc_deadband_limit(gimbal_control_set->gimbal_rc_ctrl->rc.ch[PITCH_CHANNEL], pitch_channel, RC_DEADBAND);
-        *yaw   = yaw_channel * YAW_RC_SEN - gimbal_control_set->gimbal_rc_ctrl->mouse.x * YAW_MOUSE_SEN;
-        *pitch = pitch_channel * PITCH_RC_SEN + gimbal_control_set->gimbal_rc_ctrl->mouse.y * PITCH_MOUSE_SEN;
+        /* no target: hold position */
+        *yaw   = 0.0f;
+        *pitch = 0.0f;
     }
 }
 
@@ -874,4 +816,28 @@ static void gimbal_motionless_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *
     }
     *yaw = 0.0f;
     *pitch = 0.0f;
+}
+
+/**
+  * @brief          ROS absolute angle control — compute incremental yaw/pitch
+  *                 from the difference between ROS target and current encoder angle
+  */
+static void gimbal_ros_absolute_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *gimbal_control_set)
+{
+    if (yaw == NULL || pitch == NULL || gimbal_control_set == NULL)
+    {
+        return;
+    }
+
+    const ros_nav_cmd_t *nav = gimbal_control_set->ros_nav_cmd;
+    if (nav == NULL || !(nav->nav_ctrl_flags & NAV_FLAG_GIMBAL_ABS_VALID))
+    {
+        *yaw = 0.0f;
+        *pitch = 0.0f;
+        return;
+    }
+
+    /* compute delta between target and current relative angle as increment */
+    *yaw   = (nav->yaw_abs   - gimbal_control_set->gimbal_yaw_motor.relative_angle)   * 0.01f;
+    *pitch = (nav->pitch_abs  - gimbal_control_set->gimbal_pitch_motor.relative_angle) * 0.01f;
 }

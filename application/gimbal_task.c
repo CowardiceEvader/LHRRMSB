@@ -370,16 +370,7 @@ void gimbal_task(void const *pvParameters)
 
         if (!(toe_is_error(YAW_GIMBAL_MOTOR_TOE) && toe_is_error(PITCH_GIMBAL_MOTOR_TOE) && toe_is_error(TRIGGER_MOTOR_TOE)))
         {
-            if (toe_is_error(DBUS_TOE))
-            {
-                CAN_cmd_gimbal(0, 0, 0, 0);
-				
-            }
-            else
-            {
-                CAN_cmd_gimbal(yaw_can_set_current, pitch_can_set_current, shoot_can_set_current, 0);
-
-            }
+            CAN_cmd_gimbal(yaw_can_set_current, pitch_can_set_current, shoot_can_set_current, 0);
         }
 
 #if GIMBAL_TEST_MODE
@@ -857,6 +848,8 @@ static void gimbal_init(gimbal_control_t *init)
     //vision + auto-aim data pointers
     init->gimbal_assist_ctrl = get_vision_data_point();
     init->auto_aim_output = get_auto_aim_output_point();
+    //ROS navigation command pointer
+    init->ros_nav_cmd = get_ros_nav_cmd_point();
     //��ʼ�����ģʽ
     init->gimbal_yaw_motor.gimbal_motor_mode = init->gimbal_yaw_motor.last_gimbal_motor_mode = GIMBAL_MOTOR_RAW;
     init->gimbal_pitch_motor.gimbal_motor_mode = init->gimbal_pitch_motor.last_gimbal_motor_mode = GIMBAL_MOTOR_RAW;
