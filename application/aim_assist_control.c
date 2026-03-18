@@ -23,6 +23,7 @@
 #include "bsp_rc.h"
 #include "stdlib.h"
 #include "usb_task.h"  // Include so we can use usb_printf
+#include "stdio.h"
 //#include "bsp_usart.h"
 
 extern UART_HandleTypeDef huart1;
@@ -38,6 +39,24 @@ uint16_t HP = 0;
 uint16_t yaw1,pitch1;
 //usart1 dma data string
 #include <stdarg.h>
+
+typedef struct
+{
+    uint32_t idle_irq_count;
+    uint32_t ok18_count;
+    uint32_t len_err_count;
+    uint32_t rc_data_err_count;
+    uint32_t fe_count;
+    uint32_t ne_count;
+    uint32_t ore_count;
+    uint32_t pe_count;
+    uint16_t last_len;
+    uint8_t last_head[6];
+    uint8_t first_ok_reported;
+    uint32_t last_report_tick;
+} uart1_diag_info_t;
+
+static uart1_diag_info_t uart1_diag = {0};
 
 // �� UART1 ׼��һ��ר�õ� DMA ��ӡ�������
 // ����Ӱ�� UART1 �ĸ��� RX �հ���Ӳ��������
@@ -57,8 +76,10 @@ void uart1_printf(const char *fmt, ...)
     // �����Ҫ��ȫ��ȫ�������ȼ����һ�� DMA �Ƿ�����
     // while (huart1.gState != HAL_UART_STATE_READY && huart1.gState != HAL_UART_STATE_BUSY_RX);
 
-    // ���� DMA ֱ�������䣬���ײ����� CPU
-    HAL_UART_Transmit_DMA(&huart1, uart1_tx_buf, len);
+    if (huart1.gState == HAL_UART_STATE_READY || huart1.gState == HAL_UART_STATE_BUSY_RX)
+    {
+        HAL_UART_Transmit_DMA(&huart1, uart1_tx_buf, len);
+    }
 }
 
 get_data_t get_data;
@@ -77,6 +98,12 @@ void aim_assistant_control_init(void)
 
     __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
     HAL_UART_Receive_DMA(&huart1, usart1_dma_rx_buffer, USART1_DMA_BUF_NUM);
+    uart1_printf("[U1 DIAG] armed baud=%lu word=%lu parity=%lu stop=%lu rxbuf=%d\r\n",
+                 (unsigned long)huart1.Init.BaudRate,
+                 (unsigned long)huart1.Init.WordLength,
+                 (unsigned long)huart1.Init.Parity,
+                 (unsigned long)huart1.Init.StopBits,
+                 USART1_DMA_BUF_NUM);
     data = get_gimbal_control_point();
 //	Assitant_Init(usart1_dma_rx_buffer[0],usart1_dma_rx_buffer[1],USART1_DMA_BUF_NUM);
 }
@@ -136,23 +163,42 @@ void Usart1Receive_IDLE(void)
     
     static uint8_t this_time_rx_len = 0;
     this_time_rx_len = USART1_DMA_BUF_NUM - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx);
+    uart1_diag.last_len = this_time_rx_len;
     
     // 2. 如果且仅如果长度正好是18字节，说明收到了一帧完整的 DBUS 数据
     if(this_time_rx_len == 18)
     {
-        // 先把裸数据打印到串口，确认物理链路（切忌如果在外部循环打印，可能会印出过期或全0的缓冲区）
-        static char debug_str[128];
-        int pos = 0;
-        pos += sprintf(debug_str + pos, "len=%d raw: ", this_time_rx_len);
-        for(uint8_t i = 0; i < 18; i++) {
-            pos += sprintf(debug_str + pos, "%02X ", usart1_dma_rx_buffer[i]);
+        uart1_diag.ok18_count++;
+        for(uint8_t i = 0; i < 6; i++)
+        {
+            uart1_diag.last_head[i] = usart1_dma_rx_buffer[i];
         }
-        sprintf(debug_str + pos, "\r\n");
-        uart1_printf("%s", debug_str);
+
+        // 先把裸数据打印到串口，确认物理链路（切忌如果在外部循环打印，可能会印出过期或全0的缓冲区）
+        if(uart1_diag.first_ok_reported == 0)
+        {
+            static char debug_str[128];
+            int pos = 0;
+            pos += sprintf(debug_str + pos, "[U1 OK] len=%d raw: ", this_time_rx_len);
+            for(uint8_t i = 0; i < 18; i++) {
+                pos += sprintf(debug_str + pos, "%02X ", usart1_dma_rx_buffer[i]);
+            }
+            sprintf(debug_str + pos, "\r\n");
+            uart1_printf("%s", debug_str);
+            uart1_diag.first_ok_reported = 1;
+        }
 
         // 3. 数据解包与控制逻辑
         memcpy(sbus_rx_buf[0], usart1_dma_rx_buffer, 18);
         sbus_to_rc(sbus_rx_buf[0], &rc_ctrl);
+
+        if (RC_data_is_error())
+        {
+            uart1_diag.rc_data_err_count++;
+            uart1_printf("[U1 RC_ERR] ch=%d,%d,%d,%d s=%d,%d\r\n",
+                         rc_ctrl.rc.ch[0], rc_ctrl.rc.ch[1], rc_ctrl.rc.ch[2], rc_ctrl.rc.ch[3],
+                         rc_ctrl.rc.s[0], rc_ctrl.rc.s[1]);
+        }
         
         // 维持安全看门狗状态
         detect_hook(DBUS_TOE);
@@ -170,8 +216,30 @@ void Usart1Receive_IDLE(void)
     }
     else if(this_time_rx_len > 0)
     {
+        uart1_diag.len_err_count++;
         // 长度不对（断帧/粘包），仅仅打印提示，不作解包，防止将错误数据送入底盘
-        uart1_printf("len=%d (not 18)\r\n", this_time_rx_len);
+        uart1_printf("[U1 LEN_ERR] len=%d (expect 18), head=%02X %02X %02X %02X %02X %02X\r\n",
+                     this_time_rx_len,
+                     usart1_dma_rx_buffer[0], usart1_dma_rx_buffer[1], usart1_dma_rx_buffer[2],
+                     usart1_dma_rx_buffer[3], usart1_dma_rx_buffer[4], usart1_dma_rx_buffer[5]);
+    }
+
+    {
+        uint32_t now = HAL_GetTick();
+        if ((now - uart1_diag.last_report_tick) >= 1000U)
+        {
+            uart1_diag.last_report_tick = now;
+            uart1_printf("[U1 SUM] idle=%lu ok18=%lu len_err=%lu rc_err=%lu FE=%lu NE=%lu ORE=%lu PE=%lu last_len=%u\r\n",
+                         (unsigned long)uart1_diag.idle_irq_count,
+                         (unsigned long)uart1_diag.ok18_count,
+                         (unsigned long)uart1_diag.len_err_count,
+                         (unsigned long)uart1_diag.rc_data_err_count,
+                         (unsigned long)uart1_diag.fe_count,
+                         (unsigned long)uart1_diag.ne_count,
+                         (unsigned long)uart1_diag.ore_count,
+                         (unsigned long)uart1_diag.pe_count,
+                         uart1_diag.last_len);
+        }
     }
 
     // [致命漏洞修复]：严禁在此处执行 memset(usart1_dma_rx_buffer, 0, USART1_DMA_BUF_NUM);
@@ -181,17 +249,39 @@ void Usart1Receive_IDLE(void)
     HAL_UART_Receive_DMA(&huart1, usart1_dma_rx_buffer, USART1_DMA_BUF_NUM);
     
     // 5. 关闭半满中断 (HT)，减少无用的 CPU 干扰
-    hdma_usart1_rx.Instance->CR &= ~(DMA_IT_HT);
+    hdma_usart1_rx.Instance->CR &= ~(1U << 3);
 }
 
 void USART1_IRQHandler(void)
 {
-    if (RESET != __HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE))
+    uint32_t sr = huart1.Instance->SR;
+
+    if (sr & (1U << 1))
     {
-        __HAL_UART_CLEAR_IDLEFLAG(&huart1);
-        //into our type function
-        Usart1Receive_IDLE();
+        uart1_diag.fe_count++;
     }
+    if (sr & (1U << 2))
+    {
+        uart1_diag.ne_count++;
+    }
+    if (sr & (1U << 3))
+    {
+        uart1_diag.ore_count++;
+    }
+    if (sr & (1U << 0))
+    {
+        uart1_diag.pe_count++;
+    }
+
+    if (sr & (1U << 4))
+    {
+        uart1_diag.idle_irq_count++;
+        (void)huart1.Instance->SR;
+        (void)huart1.Instance->DR;
+        Usart1Receive_IDLE();
+        return;
+    }
+
     HAL_UART_IRQHandler(&huart1);
 }
 
