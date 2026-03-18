@@ -910,9 +910,14 @@
               <FilePath>..\application\servo_task.c</FilePath>
             </File>
             <File>
-              <FileName>aim_assist_control.c</FileName>
+              <FileName>vision_rx_task.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\application\aim_assist_control.c</FilePath>
+              <FilePath>..\application\vision_rx_task.c</FilePath>
+            </File>
+            <File>
+              <FileName>auto_aim_task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\application\auto_aim_task.c</FilePath>
             </File>
           </Files>
         </Group>

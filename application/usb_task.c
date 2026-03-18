@@ -1,7 +1,7 @@
 /**
   ****************************(C) COPYRIGHT 2019 DJI****************************
   * @file       usb_task.c/h
-  * @brief      usb outputs the error message.usbÊä³ö´íÎóÐÅÏ¢
+  * @brief      usb outputs the error message.usbï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
   * @note       
   * @history
   *  Version    Date            Author          Modification
@@ -57,15 +57,24 @@ DBUS:%s\r\n\
 
 void usb_printf(const char *fmt,...)
 {
-    static va_list ap;
-    uint16_t len = 0;
+    va_list ap;
+    int len = 0;
 
     va_start(ap, fmt);
 
-    len = vsprintf((char *)usb_buf, fmt, ap);
+    len = vsnprintf((char *)usb_buf, sizeof(usb_buf), fmt, ap);
 
     va_end(ap);
 
+    if (len <= 0)
+    {
+        return;
+    }
 
-    CDC_Transmit_FS(usb_buf, len);
+    if (len > (int)sizeof(usb_buf))
+    {
+        len = sizeof(usb_buf);
+    }
+
+    CDC_Transmit_FS(usb_buf, (uint16_t)len);
 }

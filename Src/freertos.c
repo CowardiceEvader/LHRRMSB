@@ -38,6 +38,8 @@
 #include "usb_task.h"
 #include "voltage_task.h"
 #include "servo_task.h"
+#include "vision_rx_task.h"
+#include "auto_aim_task.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,6 +56,8 @@ osThreadId referee_usart_task_handle;
 osThreadId usb_task_handle;
 osThreadId battery_voltage_handle;
 osThreadId servo_task_handle;
+osThreadId vision_rx_task_handle;
+osThreadId auto_aim_task_handle;
 
 
 /* USER CODE END PTD */
@@ -155,8 +159,8 @@ void MX_FREERTOS_Init(void) {
 //    osThreadDef(ChassisTask, chassis_task, osPriorityAboveNormal, 0, 512);
 //    chassisTaskHandle = osThreadCreate(osThread(ChassisTask), NULL);
 
-//    osThreadDef(DETECT, detect_task, osPriorityNormal, 0, 256);
-//    detect_handle = osThreadCreate(osThread(DETECT), NULL);
+  osThreadDef(DETECT, detect_task, osPriorityNormal, 0, 256);
+  detect_handle = osThreadCreate(osThread(DETECT), NULL);
 
     osThreadDef(gimbalTask, gimbal_task, osPriorityHigh, 0, 512);
     gimbalTaskHandle = osThreadCreate(osThread(gimbalTask), NULL);
@@ -185,6 +189,11 @@ void MX_FREERTOS_Init(void) {
     osThreadDef(SERVO, servo_task, osPriorityNormal, 0, 128);
     servo_task_handle = osThreadCreate(osThread(SERVO), NULL);
 
+    osThreadDef(VISION_RX, vision_rx_task, osPriorityAboveNormal, 0, 256);
+    vision_rx_task_handle = osThreadCreate(osThread(VISION_RX), NULL);
+
+    osThreadDef(AUTO_AIM, auto_aim_task, osPriorityNormal, 0, 256);
+    auto_aim_task_handle = osThreadCreate(osThread(AUTO_AIM), NULL);
 
 
   /* USER CODE END RTOS_THREADS */

@@ -373,18 +373,23 @@ void OLED_show_string(uint8_t col, uint8_t row, uint8_t *chr)
 void OLED_printf(uint8_t col, uint8_t row, const char *fmt,...)
 {
     static uint8_t LCD_BUF[22] = {0};
-    static va_list ap;
-    uint16_t remain_size = 0;
+    va_list ap;
+    int remain_size = 0;
 
     va_start(ap, fmt);
 
-    remain_size = vsprintf((char *)LCD_BUF, fmt, ap);
+    remain_size = vsnprintf((char *)LCD_BUF, sizeof(LCD_BUF), fmt, ap);
 
     va_end(ap);
 
-
-
-    LCD_BUF[remain_size] = '\0';
+    if (remain_size < 0)
+    {
+        LCD_BUF[0] = '\0';
+    }
+    else if (remain_size >= (int)sizeof(LCD_BUF))
+    {
+        LCD_BUF[sizeof(LCD_BUF) - 1] = '\0';
+    }
 
     OLED_show_string(col, row, LCD_BUF);
 }

@@ -41,7 +41,7 @@
 #include "bsp_usart.h"
 #include "bsp_rc.h"
 #include "remote_control.h"
-#include "aim_assist_control.h"
+#include "vision_rx_task.h"
 
 #include "calibrate_task.h"
 #include "chassis_task.h"
@@ -153,7 +153,7 @@ int main(void)
 	
 	
     usart1_tx_dma_init();
-	aim_assistant_control_init();
+    /* aim_assistant_control_init() removed — logic moved into vision_rx_task */
 	
   /* USER CODE END 2 */
 
