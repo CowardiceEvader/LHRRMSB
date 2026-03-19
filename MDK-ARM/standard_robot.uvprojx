@@ -873,6 +873,7 @@
               <FileName>shoot.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\application\shoot.c</FilePath>
+            </File>
             <File>
               <FileName>usb_task.c</FileName>
               <FileType>1</FileType>
