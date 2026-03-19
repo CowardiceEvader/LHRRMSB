@@ -1,7 +1,7 @@
 /**
   ****************************(C) COPYRIGHT 2019 DJI****************************
   * @file       oled_task.c/h
-  * @brief      OLED show error value.oledÆÁÄ»ÏÔÊ¾´íÎóÂë
+  * @brief      OLED show error value.oledï¿½ï¿½Ä»ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   * @note       
   * @history
   *  Version    Date            Author          Modification
@@ -40,7 +40,7 @@ static uint8_t refresh_tick = 0;
   * @retval         none
   */
 /**
-  * @brief          oledÈÎÎñ
+  * @brief          oledï¿½ï¿½ï¿½ï¿½
   * @param[in]      pvParameters: NULL
   * @retval         none
   */
@@ -99,8 +99,8 @@ void oled_task(void const * argument)
                     OLED_printf(3, 2, "%d", get_battery_percentage());
                 }
 
-                OLED_show_string(90, 27, "DBUS");
-                OLED_show_graphic(115, 27, &check_box[error_list_local[DBUS_TOE].error_exist]);
+                OLED_show_string(84, 27, "VISION");
+                OLED_show_graphic(115, 27, &check_box[error_list_local[VISION_TOE].error_exist]);
                 for(i = CHASSIS_MOTOR1_TOE; i < TRIGGER_MOTOR_TOE + 1; i++)
                 {
                     show_col = ((i-1) * 32) % 128;

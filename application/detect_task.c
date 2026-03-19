@@ -259,10 +259,7 @@ static void detect_init(uint32_t time)
     //��������ʱ�䣬�����ȶ�����ʱ�䣬���ȼ� offlineTime onlinetime priority
     uint16_t set_item[ERROR_LIST_LENGHT][3] =
         {
-            //{30, 40, 15},   //SBUS
-						{120, 80, 15},  //SBUS
-						
-            {10, 10, 11},   //motor1
+                        {10, 10, 11},   //motor1
             {10, 10, 10},   //motor2
             {10, 10, 9},    //motor3
             {10, 10, 8},    //motor4
@@ -301,9 +298,5 @@ static void detect_init(uint32_t time)
     error_list[OLED_TOE].data_is_error_fun = NULL;
     error_list[OLED_TOE].solve_lost_fun = OLED_com_reset;
     error_list[OLED_TOE].solve_data_error_fun = NULL;
-
-//    error_list[DBUSTOE].dataIsErrorFun = RC_data_is_error;
-//    error_list[DBUSTOE].solveLostFun = slove_RC_lost;
-//    error_list[DBUSTOE].solveDataErrorFun = slove_data_error;
 
 }

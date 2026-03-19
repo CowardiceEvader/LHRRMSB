@@ -61,8 +61,7 @@
 //�������Լ���Ӧ�豸˳��
 enum errorList
 {
-    DBUS_TOE = 0,
-    CHASSIS_MOTOR1_TOE,
+  CHASSIS_MOTOR1_TOE = 0,
     CHASSIS_MOTOR2_TOE,
     CHASSIS_MOTOR3_TOE,
     CHASSIS_MOTOR4_TOE,

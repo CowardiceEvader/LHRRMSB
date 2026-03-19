@@ -785,11 +785,6 @@
               <FilePath>..\bsp\boards\bsp_led.c</FilePath>
             </File>
             <File>
-              <FileName>bsp_rc.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\bsp\boards\bsp_rc.c</FilePath>
-            </File>
-            <File>
               <FileName>bsp_rng.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\bsp\boards\bsp_rng.c</FilePath>
@@ -873,11 +868,6 @@
               <FileName>referee_usart_task.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\application\referee_usart_task.c</FilePath>
-            </File>
-            <File>
-              <FileName>remote_control.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\application\remote_control.c</FilePath>
             </File>
             <File>
               <FileName>shoot.c</FileName>

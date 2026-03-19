@@ -23,24 +23,10 @@
 
 #include "arm_math.h"
 #include "pid.h"
-#include "remote_control.h"
 #include "CAN_receive.h"
 #include "detect_task.h"
 #include "INS_task.h"
 #include "chassis_power_control.h"
-
-#define rc_deadband_limit(input, output, dealine)        \
-    {                                                    \
-        if ((input) > (dealine) || (input) < -(dealine)) \
-        {                                                \
-            (output) = (input);                          \
-        }                                                \
-        else                                             \
-        {                                                \
-            (output) = 0;                                \
-        }                                                \
-    }
-
 
 /**
   * @brief          "chassis_move" valiable initialization, include pid initialization, remote control data point initialization, 3508 chassis motors
@@ -219,9 +205,6 @@ static void chassis_init(chassis_move_t *chassis_move_init)
     //in beginning�� chassis mode is raw 
     //���̿���״̬Ϊԭʼ
     chassis_move_init->chassis_mode = CHASSIS_VECTOR_RAW;
-    //get remote control point
-    //��ȡң����ָ��
-    chassis_move_init->chassis_RC = get_remote_control_point();
     //get ROS navigation command pointer
     chassis_move_init->ros_nav_cmd = get_ros_nav_cmd_point();
     //get gyro sensor euler angle point
@@ -385,55 +368,14 @@ void chassis_rc_to_control_vector(fp32 *vx_set, fp32 *vy_set, chassis_move_t *ch
     {
         return;
     }
-    
-    int16_t vx_channel, vy_channel;
-    fp32 vx_set_channel, vy_set_channel;
-    //deadline, because some remote control need be calibrated,  the value of rocker is not zero in middle place,
-    //�������ƣ���Ϊң�������ܴ��ڲ��� ҡ�����м䣬��ֵ��Ϊ0
-    rc_deadband_limit(chassis_move_rc_to_vector->chassis_RC->rc.ch[CHASSIS_X_CHANNEL], vx_channel, CHASSIS_RC_DEADLINE);
-    rc_deadband_limit(chassis_move_rc_to_vector->chassis_RC->rc.ch[CHASSIS_Y_CHANNEL], vy_channel, CHASSIS_RC_DEADLINE);
 
-    vx_set_channel = vx_channel * CHASSIS_VX_RC_SEN;
-    vy_set_channel = vy_channel * -CHASSIS_VY_RC_SEN;
+  first_order_filter_cali(&chassis_move_rc_to_vector->chassis_cmd_slow_set_vx, 0.0f);
+  first_order_filter_cali(&chassis_move_rc_to_vector->chassis_cmd_slow_set_vy, 0.0f);
+  chassis_move_rc_to_vector->chassis_cmd_slow_set_vx.out = 0.0f;
+  chassis_move_rc_to_vector->chassis_cmd_slow_set_vy.out = 0.0f;
 
-    //keyboard set speed set-point
-    //���̿���
-    if (chassis_move_rc_to_vector->chassis_RC->key.v & CHASSIS_FRONT_KEY)
-    {
-        vx_set_channel = chassis_move_rc_to_vector->vx_max_speed;
-    }
-    else if (chassis_move_rc_to_vector->chassis_RC->key.v & CHASSIS_BACK_KEY)
-    {
-        vx_set_channel = chassis_move_rc_to_vector->vx_min_speed;
-    }
-
-    if (chassis_move_rc_to_vector->chassis_RC->key.v & CHASSIS_LEFT_KEY)
-    {
-        vy_set_channel = chassis_move_rc_to_vector->vy_max_speed;
-    }
-    else if (chassis_move_rc_to_vector->chassis_RC->key.v & CHASSIS_RIGHT_KEY)
-    {
-        vy_set_channel = chassis_move_rc_to_vector->vy_min_speed;
-    }
-
-    //first order low-pass replace ramp function, calculate chassis speed set-point to improve control performance
-    //һ�׵�ͨ�˲�����б����Ϊ�����ٶ�����
-    first_order_filter_cali(&chassis_move_rc_to_vector->chassis_cmd_slow_set_vx, vx_set_channel);
-    first_order_filter_cali(&chassis_move_rc_to_vector->chassis_cmd_slow_set_vy, vy_set_channel);
-    //stop command, need not slow change, set zero derectly
-    //ֹͣ�źţ�����Ҫ�������٣�ֱ�Ӽ��ٵ���
-    if (vx_set_channel < CHASSIS_RC_DEADLINE * CHASSIS_VX_RC_SEN && vx_set_channel > -CHASSIS_RC_DEADLINE * CHASSIS_VX_RC_SEN)
-    {
-        chassis_move_rc_to_vector->chassis_cmd_slow_set_vx.out = 0.0f;
-    }
-
-    if (vy_set_channel < CHASSIS_RC_DEADLINE * CHASSIS_VY_RC_SEN && vy_set_channel > -CHASSIS_RC_DEADLINE * CHASSIS_VY_RC_SEN)
-    {
-        chassis_move_rc_to_vector->chassis_cmd_slow_set_vy.out = 0.0f;
-    }
-
-    *vx_set = chassis_move_rc_to_vector->chassis_cmd_slow_set_vx.out;
-    *vy_set = chassis_move_rc_to_vector->chassis_cmd_slow_set_vy.out;
+  *vx_set = 0.0f;
+  *vy_set = 0.0f;
 }
 /**
   * @brief          set chassis control set-point, three movement control value is set by "chassis_behaviour_control_set".

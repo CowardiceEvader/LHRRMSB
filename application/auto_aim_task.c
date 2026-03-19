@@ -14,7 +14,6 @@
 
 #include "auto_aim_task.h"
 #include "vision_rx_task.h"
-#include "remote_control.h"
 #include "cmsis_os.h"
 #include "string.h"
 

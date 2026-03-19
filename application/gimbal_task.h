@@ -30,7 +30,6 @@
 #include "struct_typedef.h"
 #include "CAN_receive.h"
 #include "pid.h"
-#include "remote_control.h"
 #include "vision_rx_task.h"
 #include "auto_aim_task.h"
 
@@ -92,22 +91,6 @@
 #define PITCH_CHANNEL 3
 #define GIMBAL_MODE_CHANNEL 0
 
-//turn 180��
-//��ͷ180 ����
-#define TURN_KEYBOARD KEY_PRESSED_OFFSET_F
-//turn speed
-//��ͷ��̨�ٶ�
-#define TURN_SPEED    0.04f
-//���԰�����δʹ��
-#define TEST_KEYBOARD KEY_PRESSED_OFFSET_R
-//rocker value deadband
-//ң����������������Ϊң�������ڲ��죬ҡ�����м䣬��ֵ��һ��Ϊ��
-#define RC_DEADBAND   10
-
-
-#define YAW_RC_SEN    -0.000005f
-#define PITCH_RC_SEN  -0.000006f //0.005
-
 #define YAW_MOUSE_SEN   0.00005f
 #define PITCH_MOUSE_SEN 0.00015f
 
@@ -151,8 +134,6 @@
 #define GIMBAL_CALI_START_STEP  GIMBAL_CALI_PITCH_MAX_STEP
 #define GIMBAL_CALI_END_STEP    5
 
-//�ж�ң�����������ʱ���Լ�ң�����������жϣ�������̨yaw����ֵ�Է�������Ư��
-#define GIMBAL_MOTIONLESS_RC_DEADLINE 10
 #define GIMBAL_MOTIONLESS_TIME_MAX    3000
 
 //�������ֵת���ɽǶ�ֵ
@@ -237,9 +218,6 @@ typedef struct
 
 typedef struct
 {
-    const RC_ctrl_t *gimbal_rc_ctrl;
-	const RC_ctrl_t *aim_assist_ctrl;
-
 	const ros_aim_data_t *gimbal_assist_ctrl;
 	const auto_aim_output_t *auto_aim_output;
 	const ros_nav_cmd_t *ros_nav_cmd;

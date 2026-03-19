@@ -837,7 +837,7 @@ static void gimbal_ros_absolute_control(fp32 *yaw, fp32 *pitch, gimbal_control_t
         return;
     }
 
-    /* compute delta between target and current relative angle as increment */
-    *yaw   = (nav->yaw_abs   - gimbal_control_set->gimbal_yaw_motor.relative_angle)   * 0.01f;
-    *pitch = (nav->pitch_abs  - gimbal_control_set->gimbal_pitch_motor.relative_angle) * 0.01f;
+    /* use absolute-angle feedback to match NAV absolute targets */
+    *yaw   = (nav->yaw_abs   - gimbal_control_set->gimbal_yaw_motor.absolute_angle)   * 0.01f;
+    *pitch = (nav->pitch_abs - gimbal_control_set->gimbal_pitch_motor.absolute_angle) * 0.01f;
 }

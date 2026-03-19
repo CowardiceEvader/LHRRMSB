@@ -55,6 +55,24 @@ typedef struct
 
 static uart1_diag_t diag = {0};
 
+static void vision_link_failsafe_clear(void)
+{
+    ros_aim_data.yaw_offset = 0.0f;
+    ros_aim_data.pitch_offset = 0.0f;
+    ros_aim_data.target_valid = 0U;
+    ros_aim_data.shoot_suggest = 0U;
+    ros_aim_data.distance_mm = 0U;
+    ros_aim_data.target_id = 0U;
+    memset(ros_aim_data.reserved, 0, sizeof(ros_aim_data.reserved));
+
+    ros_nav_cmd.vx = 0.0f;
+    ros_nav_cmd.vy = 0.0f;
+    ros_nav_cmd.vz = 0.0f;
+    ros_nav_cmd.yaw_abs = 0.0f;
+    ros_nav_cmd.pitch_abs = 0.0f;
+    ros_nav_cmd.nav_ctrl_flags = 0U;
+}
+
 /* ================================================================
  *  CRC8 — XOR over CMD_ID + DATA_LEN + PAYLOAD
  * ================================================================ */
@@ -317,6 +335,12 @@ void vision_rx_task(void const *argument)
     {
         /* parse all available bytes */
         ros_parse_fifo();
+
+        /* link lost: clear stale commands to enforce safe output */
+        if (toe_is_error(VISION_TOE))
+        {
+            vision_link_failsafe_clear();
+        }
 
         /* send status report every 50ms */
         uint32_t now = HAL_GetTick();

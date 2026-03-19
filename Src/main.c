@@ -39,8 +39,6 @@
 #include "bsp_can.h"
 #include "bsp_delay.h"
 #include "bsp_usart.h"
-#include "bsp_rc.h"
-#include "remote_control.h"
 #include "vision_rx_task.h"
 
 #include "calibrate_task.h"

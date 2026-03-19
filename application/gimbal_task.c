@@ -35,7 +35,6 @@
 #include "CAN_receive.h"
 #include "user_lib.h"
 #include "detect_task.h"
-#include "remote_control.h"
 #include "gimbal_behaviour.h"
 #include "INS_task.h"
 #include "shoot.h"
@@ -843,8 +842,6 @@ static void gimbal_init(gimbal_control_t *init)
     //����������ָ���ȡ
     init->gimbal_INT_angle_point = get_INS_angle_point();
     init->gimbal_INT_gyro_point = get_gyro_data_point();
-    //ң��������ָ���ȡ
-    init->gimbal_rc_ctrl = get_remote_control_point();
     //vision + auto-aim data pointers
     init->gimbal_assist_ctrl = get_vision_data_point();
     init->auto_aim_output = get_auto_aim_output_point();

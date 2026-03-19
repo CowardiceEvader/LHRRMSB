@@ -22,7 +22,6 @@
 #include "CAN_receive.h"
 #include "gimbal_task.h"
 #include "pid.h"
-#include "remote_control.h"
 #include "user_lib.h"
 #include "vision_rx_task.h"
 
@@ -83,16 +82,6 @@
 //chassis 3508 max motor control current
 //����3508���can���͵���ֵ
 #define MAX_MOTOR_CAN_CURRENT 16000.0f
-//press the key, chassis will swing
-//����ҡ�ڰ���
-#define SWING_KEY KEY_PRESSED_OFFSET_CTRL
-//chassi forward, back, left, right key
-//����ǰ�����ҿ��ư���
-#define CHASSIS_FRONT_KEY KEY_PRESSED_OFFSET_W
-#define CHASSIS_BACK_KEY KEY_PRESSED_OFFSET_S
-#define CHASSIS_LEFT_KEY KEY_PRESSED_OFFSET_A
-#define CHASSIS_RIGHT_KEY KEY_PRESSED_OFFSET_D
-
 //m3508 rmp change to chassis speed,
 //m3508ת���ɵ����ٶ�(m/s)�ı�����
 #define M3508_MOTOR_RPM_TO_VECTOR 0.000415809748903494517209f
@@ -153,7 +142,6 @@ typedef struct
 
 typedef struct
 {
-  const RC_ctrl_t *chassis_RC;               //����ʹ�õ�ң����ָ��, the point to remote control
   const ros_nav_cmd_t *ros_nav_cmd;          //ROS navigation command pointer
   const gimbal_motor_t *chassis_yaw_motor;   //will use the relative angle of yaw gimbal motor to calculate the euler angle.����ʹ�õ�yaw��̨�������ԽǶ���������̵�ŷ����.
   const gimbal_motor_t *chassis_pitch_motor; //will use the relative angle of pitch gimbal motor to calculate the euler angle.����ʹ�õ�pitch��̨�������ԽǶ���������̵�ŷ����
