@@ -301,7 +301,12 @@ void USART1_IRQHandler(void)
         (void)huart1.Instance->SR;
         (void)huart1.Instance->DR;
 
-        HAL_UART_DMAStop(&huart1);
+        /* Only stop RX DMA — never touch TX DMA here.
+         * HAL_UART_DMAStop() kills both TX and RX, which would
+         * abort any in-flight status-report transmission and may
+         * leave huart1.gState stuck in BUSY_TX, silently blocking
+         * all subsequent uart1_dma_send() calls.                   */
+        HAL_DMA_Abort(&hdma_usart1_rx);
         uint16_t rx_len = VISION_RX_BUF_NUM
                         - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx);
 
@@ -311,8 +316,16 @@ void USART1_IRQHandler(void)
                                   (char *)vision_dma_rx_buf, rx_len);
         }
 
-        HAL_UART_Receive_DMA(&huart1, vision_dma_rx_buf, VISION_RX_BUF_NUM);
-        hdma_usart1_rx.Instance->CR &= ~(1U << 3);
+        /* Restart RX DMA directly at register level — avoid
+         * HAL_UART_Receive_DMA() which resets the full HAL state
+         * machine and could interfere with an ongoing TX transfer. */
+        hdma_usart1_rx.Instance->CR &= ~(1U << 0);          /* disable stream  */
+        while (hdma_usart1_rx.Instance->CR & (1U << 0)) {}   /* wait until off  */
+        hdma_usart1_rx.Instance->NDTR = VISION_RX_BUF_NUM;   /* reload count    */
+        hdma_usart1_rx.Instance->M0AR = (uint32_t)vision_dma_rx_buf;
+        __HAL_DMA_CLEAR_FLAG(&hdma_usart1_rx, DMA_FLAG_TCIF1_5 |
+                             DMA_FLAG_HTIF1_5 | DMA_FLAG_TEIF1_5);
+        hdma_usart1_rx.Instance->CR |= (1U << 0);            /* enable stream   */
         return;
     }
 
