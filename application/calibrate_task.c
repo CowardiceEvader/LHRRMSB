@@ -245,9 +245,6 @@ static uint8_t cali_sensor_size[CALI_LIST_LENGHT] =
 
 void *cali_hook_fun[CALI_LIST_LENGHT] = {cali_head_hook, cali_gimbal_hook, cali_gyro_hook, NULL, NULL};
 
-static uint32_t calibrate_systemTick;
-
-
 /**
   * @brief          calibrate task, created by main function
   * @param[in]      pvParameters: null

@@ -4,9 +4,7 @@ standard_tpye_c\chassis_task.o: ..\application\struct_typedef.h
 standard_tpye_c\chassis_task.o: ..\application\CAN_receive.h
 standard_tpye_c\chassis_task.o: ..\application\gimbal_task.h
 standard_tpye_c\chassis_task.o: ..\components\controller\pid.h
-standard_tpye_c\chassis_task.o: ..\application\remote_control.h
-standard_tpye_c\chassis_task.o: ..\bsp\boards\bsp_rc.h
-standard_tpye_c\chassis_task.o: ..\application\aim_assist_control.h
+standard_tpye_c\chassis_task.o: ..\application\vision_rx_task.h
 standard_tpye_c\chassis_task.o: ../Inc/main.h
 standard_tpye_c\chassis_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h
 standard_tpye_c\chassis_task.o: ../Inc/stm32f4xx_hal_conf.h
@@ -52,6 +50,7 @@ standard_tpye_c\chassis_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ha
 standard_tpye_c\chassis_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h
 standard_tpye_c\chassis_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h
 standard_tpye_c\chassis_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h
+standard_tpye_c\chassis_task.o: ..\application\auto_aim_task.h
 standard_tpye_c\chassis_task.o: ..\components\algorithm\user_lib.h
 standard_tpye_c\chassis_task.o: ..\application\chassis_behaviour.h
 standard_tpye_c\chassis_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h

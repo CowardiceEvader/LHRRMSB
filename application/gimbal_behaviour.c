@@ -558,15 +558,7 @@ static void gimbal_behavour_set(gimbal_control_t *gimbal_mode_set)
         gimbal_behaviour = GIMBAL_RELATIVE_ANGLE;
     }
 
-    //enter init mode when first leaving ZERO_FORCE
-    {
-        static gimbal_behaviour_e last_gimbal_behaviour = GIMBAL_ZERO_FORCE;
-        if (last_gimbal_behaviour == GIMBAL_ZERO_FORCE && gimbal_behaviour != GIMBAL_ZERO_FORCE)
-        {
-            gimbal_behaviour = GIMBAL_INIT;
-        }
-        last_gimbal_behaviour = gimbal_behaviour;
-    }
+    // ROS-only control: never force INIT sweep automatically.
 }
 
 /**

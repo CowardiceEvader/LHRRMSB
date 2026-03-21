@@ -1,30 +1,3 @@
-/**
-  ****************************(C) COPYRIGHT 2019 DJI****************************
-  * @file       gimbal_task.c/h
-  * @brief      gimbal control task, because use the euler angle calculated by
-  *             gyro sensor, range (-pi,pi), angle set-point must be in this 
-  *             range.gimbal has two control mode, gyro mode and enconde mode
-  *             gyro mode: use euler angle to control, encond mode: use enconde
-  *             angle to control. and has some special mode:cali mode, motionless
-  *             mode.
-  *             �����̨��������������̨ʹ�������ǽ�����ĽǶȣ��䷶Χ�ڣ�-pi,pi��
-  *             �ʶ�����Ŀ��ǶȾ�Ϊ��Χ����������ԽǶȼ���ĺ�������̨��Ҫ��Ϊ2��
-  *             ״̬�������ǿ���״̬�����ð��������ǽ������̬�ǽ��п��ƣ�����������
-  *             ״̬��ͨ����������ı���ֵ���Ƶ�У׼�����⻹��У׼״̬��ֹͣ״̬�ȡ�
-  * @note       
-  * @history
-  *  Version    Date            Author          Modification
-  *  V1.0.0     Dec-26-2018     RM              1. done
-  *  V1.1.0     Nov-11-2019     RM              1. add some annotation
-  *
-  @verbatim
-  ==============================================================================
-
-  ==============================================================================
-  @endverbatim
-  ****************************(C) COPYRIGHT 2019 DJI****************************
-  */
-
 #include "gimbal_task.h"
 
 #include "main.h"
@@ -269,6 +242,9 @@ static void gimbal_PID_clear(gimbal_PID_t *pid_clear);
   */
 static fp32 gimbal_PID_calc(gimbal_PID_t *pid, fp32 get, fp32 set, fp32 error_delta);
 
+static bool_t gimbal_ros_command_active(const gimbal_control_t *control);
+static void gimbal_apply_safe_defaults(gimbal_control_t *control);
+
 /**
   * @brief          gimbal calibration calculate
   * @param[in]      gimbal_cali: cali data
@@ -312,6 +288,63 @@ gimbal_control_t gimbal_control;
 static int16_t yaw_can_set_current = 0, pitch_can_set_current = 0, shoot_can_set_current = 0;
 //	           yaw_dual_can_set_current = 0, pitch_dual_can_set_current = 0, shoot_dual_can_set_current = 0;
 
+static bool_t gimbal_ros_command_active(const gimbal_control_t *control)
+{
+    if (control == NULL)
+    {
+        return 0;
+    }
+
+    // If ROS link is offline, force no motion output.
+    if (toe_is_error(VISION_TOE))
+    {
+        return 0;
+    }
+
+    if (control->auto_aim_output != NULL && control->auto_aim_output->aim_valid)
+    {
+        return 1;
+    }
+
+    if (control->ros_nav_cmd != NULL &&
+        (control->ros_nav_cmd->nav_ctrl_flags & NAV_FLAG_GIMBAL_ABS_VALID))
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+static void gimbal_apply_safe_defaults(gimbal_control_t *control)
+{
+    if (control == NULL)
+    {
+        return;
+    }
+
+    // If calibration did not initialize valid limits, prevent controller from clamping to a wrong hard point.
+    if (control->gimbal_pitch_motor.max_relative_angle <= control->gimbal_pitch_motor.min_relative_angle)
+    {
+        control->gimbal_pitch_motor.offset_ecd = control->gimbal_pitch_motor.gimbal_motor_measure->ecd;
+        control->gimbal_pitch_motor.max_relative_angle = 1.5f;
+        control->gimbal_pitch_motor.min_relative_angle = -1.5f;
+    }
+
+    if (control->gimbal_yaw_motor.max_relative_angle <= control->gimbal_yaw_motor.min_relative_angle)
+    {
+        control->gimbal_yaw_motor.offset_ecd = control->gimbal_yaw_motor.gimbal_motor_measure->ecd;
+        control->gimbal_yaw_motor.max_relative_angle = 3.0f;
+        control->gimbal_yaw_motor.min_relative_angle = -3.0f;
+    }
+
+    // Re-anchor current setpoints to current feedback to avoid startup jump.
+    gimbal_feedback_update(control);
+    control->gimbal_yaw_motor.relative_angle_set = control->gimbal_yaw_motor.relative_angle;
+    control->gimbal_pitch_motor.relative_angle_set = control->gimbal_pitch_motor.relative_angle;
+    control->gimbal_yaw_motor.absolute_angle_set = control->gimbal_yaw_motor.absolute_angle;
+    control->gimbal_pitch_motor.absolute_angle_set = control->gimbal_pitch_motor.absolute_angle;
+}
+
 /**
   * @brief          gimbal task, osDelay GIMBAL_CONTROL_TIME (1ms) 
   * @param[in]      pvParameters: null
@@ -342,6 +375,8 @@ void gimbal_task(void const *pvParameters)
         gimbal_feedback_update(&gimbal_control);             //��̨���ݷ���
     }
 
+    gimbal_apply_safe_defaults(&gimbal_control);
+
     while (1)
     {
         gimbal_set_mode(&gimbal_control);                    //������̨����ģʽ
@@ -367,9 +402,22 @@ void gimbal_task(void const *pvParameters)
 		
 #endif
 
-        if (!(toe_is_error(YAW_GIMBAL_MOTOR_TOE) && toe_is_error(PITCH_GIMBAL_MOTOR_TOE) && toe_is_error(TRIGGER_MOTOR_TOE)))
+        if (!gimbal_ros_command_active(&gimbal_control))
         {
-            CAN_cmd_gimbal(yaw_can_set_current, pitch_can_set_current, shoot_can_set_current, 0);
+          yaw_can_set_current = 0;
+          pitch_can_set_current = 0;
+          shoot_can_set_current = 0;
+        }
+
+        if (!toe_is_error(YAW_GIMBAL_MOTOR_TOE) &&
+          !toe_is_error(PITCH_GIMBAL_MOTOR_TOE) &&
+          !toe_is_error(TRIGGER_MOTOR_TOE))
+        {
+          CAN_cmd_gimbal(yaw_can_set_current, pitch_can_set_current, shoot_can_set_current, 0);
+        }
+        else
+        {
+          CAN_cmd_gimbal(0, 0, 0, 0);
         }
 
 #if GIMBAL_TEST_MODE

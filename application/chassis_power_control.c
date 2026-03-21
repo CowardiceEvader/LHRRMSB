@@ -1,13 +1,13 @@
 /**
   ****************************(C) COPYRIGHT 2019 DJI****************************
   * @file       chassis_power_control.c/h
-  * @brief      chassis power control.µ×ÅÌ¹¦ÂÊ¿ØÖÆ
+  * @brief      chassis power control.åº•ç›˜åŠŸçŽ‡æŽ§åˆ¶
   * @note       this is only controling 80 w power, mainly limit motor current set.
   *             if power limit is 40w, reduce the value JUDGE_TOTAL_CURRENT_LIMIT 
   *             and POWER_CURRENT_LIMIT, and chassis max speed (include max_vx_speed, min_vx_speed)
-  *             Ö»¿ØÖÆ80w¹¦ÂÊ£¬Ö÷ÒªÍ¨¹ý¿ØÖÆµç»úµçÁ÷Éè¶¨Öµ,Èç¹ûÏÞÖÆ¹¦ÂÊÊÇ40w£¬¼õÉÙ
-  *             JUDGE_TOTAL_CURRENT_LIMITºÍPOWER_CURRENT_LIMITµÄÖµ£¬»¹ÓÐµ×ÅÌ×î´óËÙ¶È
-  *             (°üÀ¨max_vx_speed, min_vx_speed)
+  *             åªæŽ§åˆ¶80wåŠŸçŽ‡ï¼Œä¸»è¦é€šè¿‡æŽ§åˆ¶ç”µæœºç”µæµè®¾å®šå€¼,å¦‚æžœé™åˆ¶åŠŸçŽ‡æ˜¯40wï¼Œå‡å°‘
+  *             JUDGE_TOTAL_CURRENT_LIMITå’ŒPOWER_CURRENT_LIMITçš„å€¼ï¼Œè¿˜æœ‰åº•ç›˜æœ€å¤§é€Ÿåº¦
+  *             (åŒ…æ‹¬max_vx_speed, min_vx_speed)
   * @history
   *  Version    Date            Author          Modification
   *  V1.0.0     Nov-11-2019     RM              1. add chassis power control
@@ -38,8 +38,8 @@
   * @retval         none
   */
 /**
-  * @brief          ÏÞÖÆ¹¦ÂÊ£¬Ö÷ÒªÏÞÖÆµç»úµçÁ÷
-  * @param[in]      chassis_power_control: µ×ÅÌÊý¾Ý
+  * @brief          é™åˆ¶åŠŸçŽ‡ï¼Œä¸»è¦é™åˆ¶ç”µæœºç”µæµ
+  * @param[in]      chassis_power_control: åº•ç›˜æ•°æ®
   * @retval         none
   */
 void chassis_power_control(chassis_move_t *chassis_power_control)
@@ -61,14 +61,14 @@ void chassis_power_control(chassis_move_t *chassis_power_control)
     {
         get_chassis_power_and_buffer(&chassis_power, &chassis_power_buffer);
         // power > 80w and buffer < 60j, because buffer < 60 means power has been more than 80w
-        //¹¦ÂÊ³¬¹ý80w ºÍ»º³åÄÜÁ¿Ð¡ÓÚ60j,ÒòÎª»º³åÄÜÁ¿Ð¡ÓÚ60ÒâÎ¶×Å¹¦ÂÊ³¬¹ý80w
+        //åŠŸçŽ‡è¶…è¿‡80w å’Œç¼“å†²èƒ½é‡å°äºŽ60j,å› ä¸ºç¼“å†²èƒ½é‡å°äºŽ60æ„å‘³ç€åŠŸçŽ‡è¶…è¿‡80w
         if(chassis_power_buffer < WARNING_POWER_BUFF)
         {
             fp32 power_scale;
             if(chassis_power_buffer > 5.0f)
             {
                 //scale down WARNING_POWER_BUFF
-                //ËõÐ¡WARNING_POWER_BUFF
+                //ç¼©å°WARNING_POWER_BUFF
                 power_scale = chassis_power_buffer / WARNING_POWER_BUFF;
             }
             else
@@ -77,27 +77,27 @@ void chassis_power_control(chassis_move_t *chassis_power_control)
                 power_scale = 5.0f / WARNING_POWER_BUFF;
             }
             //scale down
-            //ËõÐ¡
+            //ç¼©å°
             total_current_limit = BUFFER_TOTAL_CURRENT_LIMIT * power_scale;
         }
         else
         {
             //power > WARNING_POWER
-            //¹¦ÂÊ´óÓÚWARNING_POWER
+            //åŠŸçŽ‡å¤§äºŽWARNING_POWER
             if(chassis_power > WARNING_POWER)
             {
                 fp32 power_scale;
                 //power < 80w
-                //¹¦ÂÊÐ¡ÓÚ80w
+                //åŠŸçŽ‡å°äºŽ80w
                 if(chassis_power < POWER_LIMIT)
                 {
                     //scale down
-                    //ËõÐ¡
+                    //ç¼©å°
                     power_scale = (POWER_LIMIT - chassis_power) / (POWER_LIMIT - WARNING_POWER);
                     
                 }
                 //power > 80w
-                //¹¦ÂÊ´óÓÚ80w
+                //åŠŸçŽ‡å¤§äºŽ80w
                 else
                 {
                     power_scale = 0.0f;
@@ -106,7 +106,7 @@ void chassis_power_control(chassis_move_t *chassis_power_control)
                 total_current_limit = BUFFER_TOTAL_CURRENT_LIMIT + POWER_TOTAL_CURRENT_LIMIT * power_scale;
             }
             //power < WARNING_POWER
-            //¹¦ÂÊÐ¡ÓÚWARNING_POWER
+            //åŠŸçŽ‡å°äºŽWARNING_POWER
             else
             {
                 total_current_limit = BUFFER_TOTAL_CURRENT_LIMIT + POWER_TOTAL_CURRENT_LIMIT;
@@ -117,7 +117,7 @@ void chassis_power_control(chassis_move_t *chassis_power_control)
     
     total_current = 0.0f;
     //calculate the original motor current set
-    //¼ÆËãÔ­±¾µç»úµçÁ÷Éè¶¨
+    //è®¡ç®—åŽŸæœ¬ç”µæœºç”µæµè®¾å®š
     for(uint8_t i = 0; i < 4; i++)
     {
         total_current += fabs(chassis_power_control->motor_speed_pid[i].out);
