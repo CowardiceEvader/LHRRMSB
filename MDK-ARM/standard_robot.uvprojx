@@ -899,11 +899,6 @@
               <FileType>1</FileType>
               <FilePath>..\application\vision_rx_task.c</FilePath>
             </File>
-            <File>
-              <FileName>auto_aim_task.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\application\auto_aim_task.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>

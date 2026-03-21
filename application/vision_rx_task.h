@@ -22,7 +22,6 @@
 #define ROS_SOF_L               0x5AU
 
 /* --- ROS -> STM32 (downstream) --- */
-#define CMD_AIM_DATA            0x01U   /* 14 bytes payload */
 #define CMD_NAV_DATA            0x02U   /* 21 bytes payload */
 #define CMD_HEARTBEAT           0x10U   /*  0 bytes payload */
 
@@ -36,9 +35,6 @@
 #define VISION_RX_BUF_NUM       36U     /* DMA buffer size (>= max frame) */
 #define VISION_FIFO_BUF_LENGTH  512U
 
-#define YAW_ASSIST_SEN          0.0015f
-#define PITCH_ASSIST_SEN        0.0015f
-
 /* ======================== data structures ======================== */
 
 /* float <-> bytes union */
@@ -48,21 +44,11 @@ typedef union
     unsigned char c[4];
 } float2uchar;
 
-/* --- CMD_AIM_DATA (0x01) payload: 14 bytes --- */
-typedef struct
-{
-    float       yaw_offset;         /* rad */
-    float       pitch_offset;       /* rad */
-    uint8_t     target_valid;       /* flags bit0 */
-    uint8_t     shoot_suggest;      /* flags bit1 */
-    uint16_t    distance_mm;        /* little-endian */
-    uint8_t     target_id;
-    uint8_t     reserved[3];
-} ros_aim_data_t;
-
 /* --- CMD_NAV_DATA (0x02) payload: 21 bytes --- */
 #define NAV_FLAG_CHASSIS_VALID    0x01U
 #define NAV_FLAG_GIMBAL_ABS_VALID 0x02U
+#define NAV_FLAG_FRIC_ON          0x04U   /* bit2: spin up friction wheels */
+#define NAV_FLAG_SHOOT            0x08U   /* bit3: fire (single / continuous) */
 
 typedef struct
 {
@@ -85,12 +71,8 @@ typedef struct
     uint16_t    reserved;
 } ros_status_report_t;
 
-/* legacy alias — keeps downstream code (auto_aim_task, gimbal_task) compiling */
-typedef ros_aim_data_t get_data_t;
-
 /* ======================== public API ======================== */
 extern void              vision_rx_task(void const *argument);
-extern const ros_aim_data_t *get_vision_data_point(void);
 extern const ros_nav_cmd_t  *get_ros_nav_cmd_point(void);
 
 #endif /* VISION_RX_TASK_H */

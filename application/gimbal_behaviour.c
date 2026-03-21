@@ -83,7 +83,6 @@
 #include "arm_math.h"
 #include "bsp_buzzer.h"
 #include "detect_task.h"
-#include "auto_aim_task.h"
 
 #include "user_lib.h"
 
@@ -91,31 +90,6 @@
 //����̨��У׼, ���÷�����Ƶ�ʺ�ǿ��
 #define gimbal_warn_buzzer_on() buzzer_on(31, 20000)
 #define gimbal_warn_buzzer_off() buzzer_off()
-
-#define int_abs(x) ((x) > 0 ? (x) : (-x))
-/**
-  * @brief          remote control dealline solve,because the value of rocker is not zero in middle place,
-  * @param          input:the raw channel value 
-  * @param          output: the processed channel value
-  * @param          deadline
-  */
-/**
-  * @brief          ң�����������жϣ���Ϊң�����Ĳ�������λ��ʱ�򣬲�һ��Ϊ0��
-  * @param          �����ң����ֵ
-  * @param          ���������������ң����ֵ
-  * @param          ����ֵ
-  */
-#define rc_deadband_limit(input, output, dealine)        \
-    {                                                    \
-        if ((input) > (dealine) || (input) < -(dealine)) \
-        {                                                \
-            (output) = (input);                          \
-        }                                                \
-        else                                             \
-        {                                                \
-            (output) = 0;                                \
-        }                                                \
-    }
 
 
 /**
@@ -261,8 +235,6 @@ static void gimbal_relative_angle_control(fp32 *yaw, fp32 *pitch, gimbal_control
 
 
 
-static void gimbal_aim_assist_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *gimbal_control_set);
-
 static void gimbal_ros_absolute_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *gimbal_control_set);
 
 /**
@@ -351,11 +323,6 @@ void gimbal_behaviour_mode_set(gimbal_control_t *gimbal_mode_set)
 //        gimbal_mode_set->gimbal_dual_pitch_motor.gimbal_motor_mode = GIMBAL_MOTOR_ENCONDE;
 		
     }
-	else if(gimbal_behaviour == GIMBAL_AIM_ASSIST)
-	{
-		 gimbal_mode_set->gimbal_yaw_motor.gimbal_motor_mode = GIMBAL_MOTOR_ENCONDE;
-        gimbal_mode_set->gimbal_pitch_motor.gimbal_motor_mode = GIMBAL_MOTOR_ENCONDE;
-	}
     else if (gimbal_behaviour == GIMBAL_ROS_ABSOLUTE)
     {
         gimbal_mode_set->gimbal_yaw_motor.gimbal_motor_mode = GIMBAL_MOTOR_ENCONDE;
@@ -406,10 +373,6 @@ void gimbal_behaviour_control_set(fp32 *add_yaw, fp32 *add_pitch, gimbal_control
     else if (gimbal_behaviour == GIMBAL_CALI)
     {
         gimbal_cali_control(add_yaw, add_pitch, gimbal_control_set);
-    }
-	else if (gimbal_behaviour == GIMBAL_AIM_ASSIST)
-    {
-        gimbal_aim_assist_control(add_yaw, add_pitch, gimbal_control_set);
     }
     else if (gimbal_behaviour == GIMBAL_ABSOLUTE_ANGLE)
     {
@@ -539,20 +502,13 @@ static void gimbal_behavour_set(gimbal_control_t *gimbal_mode_set)
         }
     }
 
-    /* ===== ROS autonomous mode selection (no RC dependency) ===== */
-    /* Priority 1: auto-aim has valid target -> AIM_ASSIST */
-    if (gimbal_mode_set->auto_aim_output != NULL &&
-        gimbal_mode_set->auto_aim_output->aim_valid)
-    {
-        gimbal_behaviour = GIMBAL_AIM_ASSIST;
-    }
-    /* Priority 2: ROS nav has gimbal absolute angle command */
-    else if (gimbal_mode_set->ros_nav_cmd != NULL &&
+    /* ===== ROS autonomous mode selection (no recognition dependency) ===== */
+    if (gimbal_mode_set->ros_nav_cmd != NULL &&
              (gimbal_mode_set->ros_nav_cmd->nav_ctrl_flags & NAV_FLAG_GIMBAL_ABS_VALID))
     {
         gimbal_behaviour = GIMBAL_ROS_ABSOLUTE;
     }
-    /* Priority 3: hold current position */
+    /* no command: hold current position */
     else
     {
         gimbal_behaviour = GIMBAL_RELATIVE_ANGLE;
@@ -761,29 +717,6 @@ static void gimbal_relative_angle_control(fp32 *yaw, fp32 *pitch, gimbal_control
   * @param[in]      gimbal_control_set:��̨����ָ��
   * @retval         none
   */
-static void gimbal_aim_assist_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *gimbal_control_set)
-{
-    if (yaw == NULL || pitch == NULL || gimbal_control_set == NULL)
-    {
-        return;
-    }
-
-    /* if auto-aim has a valid target, use its offsets */
-    if (gimbal_control_set->auto_aim_output != NULL &&
-        gimbal_control_set->auto_aim_output->aim_valid)
-    {
-        *yaw   = gimbal_control_set->auto_aim_output->yaw_offset  * YAW_ASSIST_SEN;
-        *pitch = gimbal_control_set->auto_aim_output->pitch_offset * PITCH_ASSIST_SEN;
-    }
-    else
-    {
-        /* no target: hold position */
-        *yaw   = 0.0f;
-        *pitch = 0.0f;
-    }
-}
-
-
 /**
   * @brief          when gimbal behaviour mode is GIMBAL_MOTIONLESS, the function is called
   *                 and gimbal control mode is encode mode. 

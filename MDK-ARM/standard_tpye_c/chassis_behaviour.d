@@ -51,7 +51,6 @@ standard_tpye_c\chassis_behaviour.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4
 standard_tpye_c\chassis_behaviour.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h
 standard_tpye_c\chassis_behaviour.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h
 standard_tpye_c\chassis_behaviour.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h
-standard_tpye_c\chassis_behaviour.o: ..\application\auto_aim_task.h
 standard_tpye_c\chassis_behaviour.o: ..\components\algorithm\user_lib.h
 standard_tpye_c\chassis_behaviour.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 standard_tpye_c\chassis_behaviour.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h

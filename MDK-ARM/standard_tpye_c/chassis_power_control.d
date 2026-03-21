@@ -51,7 +51,6 @@ standard_tpye_c\chassis_power_control.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm
 standard_tpye_c\chassis_power_control.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h
 standard_tpye_c\chassis_power_control.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h
 standard_tpye_c\chassis_power_control.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h
-standard_tpye_c\chassis_power_control.o: ..\application\auto_aim_task.h
 standard_tpye_c\chassis_power_control.o: ..\components\algorithm\user_lib.h
 standard_tpye_c\chassis_power_control.o: ..\application\referee.h
 standard_tpye_c\chassis_power_control.o: ..\application\protocol\protocol.h

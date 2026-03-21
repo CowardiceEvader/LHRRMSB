@@ -71,4 +71,3 @@ standard_tpye_c\vision_rx_task.o: ..\application\protocol\protocol.h
 standard_tpye_c\vision_rx_task.o: ..\application\gimbal_task.h
 standard_tpye_c\vision_rx_task.o: ..\application\CAN_receive.h
 standard_tpye_c\vision_rx_task.o: ..\components\controller\pid.h
-standard_tpye_c\vision_rx_task.o: ..\application\auto_aim_task.h

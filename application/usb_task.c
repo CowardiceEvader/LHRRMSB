@@ -28,7 +28,6 @@
 #include "voltage_task.h"
 
 uint8_t usb_buf[256];
-static const char status[2][7] = {"OK", "ERROR!"};
 const error_t *error_list_usb_local;
 
 

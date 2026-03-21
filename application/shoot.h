@@ -30,12 +30,8 @@
 
 #define SHOOT_FRIC_PWM_ADD_VALUE    100.0f
 
-//�����ɺ� �ӵ�����ȥ���ж�ʱ�䣬�Է��󴥷�
-#define SHOOT_DONE_KEY_OFF_TIME     15
 //��곤���ж�
 #define PRESS_LONG_TIME             400
-//Ħ���ָ��� ���� ʱ��
-#define UP_ADD_TIME                 80
 //�����������ֵ��Χ
 #define HALF_ECD_RANGE              4096
 #define ECD_RANGE                   8191
@@ -46,11 +42,6 @@
 //�����ٶ�
 #define TRIGGER_SPEED               -10.0f
 #define CONTINUE_TRIGGER_SPEED      -15.0f
-#define READY_TRIGGER_SPEED         -5.0f
-
-#define KEY_OFF_JUGUE_TIME          500
-#define SWITCH_TRIGGER_ON           0
-#define SWITCH_TRIGGER_OFF          1
 
 //����ʱ�� �Լ���תʱ��
 #define BLOCK_TRIGGER_SPEED         1.0f
@@ -79,7 +70,6 @@ typedef enum
 {
     SHOOT_STOP = 0,
     SHOOT_READY_FRIC,
-    SHOOT_READY_BULLET,
     SHOOT_READY,
     SHOOT_BULLET,
     SHOOT_CONTINUE_BULLET,
@@ -111,24 +101,15 @@ typedef struct
     int8_t ecd_count;
 	
 	fp32 dual_angle;
-
-    bool_t press_l;
-    bool_t press_r;
-    bool_t last_press_l;
-    bool_t last_press_r;
-    uint16_t press_l_time;
-    uint16_t press_r_time;
     uint16_t rc_s_time;
 
     uint16_t block_time;
     uint16_t reverse_time;
     bool_t move_flag;
 
-    bool_t key;
-    uint8_t key_time;
-
     uint16_t heat_limit;
     uint16_t heat;
+
 } shoot_control_t;
 
 //�����������̨ʹ��ͬһ��can��id��Ҳ�����������̨������ִ��

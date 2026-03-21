@@ -31,7 +31,6 @@
 #include "CAN_receive.h"
 #include "pid.h"
 #include "vision_rx_task.h"
-#include "auto_aim_task.h"
 
 //pitch speed close-loop PID params, max out and max iout
 //pitch �ٶȻ� PID�����Լ� PID���������������
@@ -218,8 +217,6 @@ typedef struct
 
 typedef struct
 {
-	const ros_aim_data_t *gimbal_assist_ctrl;
-	const auto_aim_output_t *auto_aim_output;
 	const ros_nav_cmd_t *ros_nav_cmd;
 	
     const fp32 *gimbal_INT_angle_point;

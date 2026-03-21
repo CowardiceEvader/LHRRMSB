@@ -301,18 +301,13 @@ static bool_t gimbal_ros_command_active(const gimbal_control_t *control)
         return 0;
     }
 
-    if (control->auto_aim_output != NULL && control->auto_aim_output->aim_valid)
-    {
-        return 1;
-    }
-
-    if (control->ros_nav_cmd != NULL &&
-        (control->ros_nav_cmd->nav_ctrl_flags & NAV_FLAG_GIMBAL_ABS_VALID))
-    {
-        return 1;
-    }
-
-    return 0;
+    // ROS link is alive — let the behaviour system decide the mode.
+    // Previously only returned 1 when aim_valid or GIMBAL_ABS_VALID,
+    // which zeroed all motor currents (including shoot) when only
+    // chassis commands were active.  The behaviour system already
+    // falls back to GIMBAL_RELATIVE_ANGLE (hold position) when no
+    // gimbal command is present, so it is safe to allow output here.
+    return 1;
 }
 
 static void gimbal_apply_safe_defaults(gimbal_control_t *control)
@@ -890,9 +885,6 @@ static void gimbal_init(gimbal_control_t *init)
     //����������ָ���ȡ
     init->gimbal_INT_angle_point = get_INS_angle_point();
     init->gimbal_INT_gyro_point = get_gyro_data_point();
-    //vision + auto-aim data pointers
-    init->gimbal_assist_ctrl = get_vision_data_point();
-    init->auto_aim_output = get_auto_aim_output_point();
     //ROS navigation command pointer
     init->ros_nav_cmd = get_ros_nav_cmd_point();
     //��ʼ�����ģʽ

@@ -65,7 +65,6 @@ standard_tpye_c\freertos.o: ..\application\CAN_receive.h
 standard_tpye_c\freertos.o: ..\application\gimbal_task.h
 standard_tpye_c\freertos.o: ..\components\controller\pid.h
 standard_tpye_c\freertos.o: ..\application\vision_rx_task.h
-standard_tpye_c\freertos.o: ..\application\auto_aim_task.h
 standard_tpye_c\freertos.o: ..\components\algorithm\user_lib.h
 standard_tpye_c\freertos.o: ..\application\detect_task.h
 standard_tpye_c\freertos.o: ..\application\INS_task.h

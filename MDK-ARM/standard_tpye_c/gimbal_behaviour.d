@@ -50,7 +50,6 @@ standard_tpye_c\gimbal_behaviour.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4x
 standard_tpye_c\gimbal_behaviour.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h
 standard_tpye_c\gimbal_behaviour.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h
 standard_tpye_c\gimbal_behaviour.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h
-standard_tpye_c\gimbal_behaviour.o: ..\application\auto_aim_task.h
 standard_tpye_c\gimbal_behaviour.o: ..\components\algorithm\Include\arm_math.h
 standard_tpye_c\gimbal_behaviour.o: ../Drivers/CMSIS/Include/core_cm4.h
 standard_tpye_c\gimbal_behaviour.o: D:\keil\ARM\ARMCC\Bin\..\include\string.h

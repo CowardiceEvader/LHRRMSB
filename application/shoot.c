@@ -37,12 +37,8 @@
 #define shoot_fric3_on(pwm) fric3_on((pwm)) //Ħ����3pwm�궨��
 #define shoot_fric4_on(pwm) fric4_on((pwm)) //Ħ����4pwm�궨��
 
-#define shoot_fric_off()    fric_off()      //�ر��ĸ�Ħ����
-
 #define shoot_laser_on()    laser_on()      //���⿪���궨��
 #define shoot_laser_off()   laser_off()     //����رպ궨��
-//΢������IO
-#define BUTTEN_TRIG_PIN HAL_GPIO_ReadPin(BUTTON_TRIG_GPIO_Port, BUTTON_TRIG_Pin)
 
 
 
@@ -119,7 +115,6 @@ void shoot_init(void)
     shoot_control.set_angle = shoot_control.angle;
     shoot_control.speed = 0.0f;
     shoot_control.speed_set = 0.0f;
-    shoot_control.key_time = 0;
 }
 
 /**
@@ -143,22 +138,6 @@ int16_t shoot_control_loop(void)
     {
         //���ò����ֵ��ٶ�
         shoot_control.speed_set = 0.0f;
-    }
-    else if(shoot_control.shoot_mode ==SHOOT_READY_BULLET)
-    {
-        if(shoot_control.key == SWITCH_TRIGGER_OFF)
-        {
-            //���ò����ֵĲ����ٶ�,��������ת��ת����
-            shoot_control.trigger_speed_set = READY_TRIGGER_SPEED;
-            trigger_motor_turn_back();
-        }
-        else
-        {
-            shoot_control.trigger_speed_set = 0.0f;
-            shoot_control.speed_set = 0.0f;
-        }
-        shoot_control.trigger_motor_pid.max_out = TRIGGER_READY_PID_MAX_OUT;
-        shoot_control.trigger_motor_pid.max_iout = TRIGGER_READY_PID_MAX_IOUT;
     }
     else if (shoot_control.shoot_mode == SHOOT_READY)
     {
@@ -199,7 +178,7 @@ int16_t shoot_control_loop(void)
         //���㲦���ֵ��PID
         PID_calc(&shoot_control.trigger_motor_pid, shoot_control.speed, shoot_control.speed_set);
         shoot_control.given_current = (int16_t)(shoot_control.trigger_motor_pid.out);
-        if(shoot_control.shoot_mode < SHOOT_READY_BULLET)
+        if(shoot_control.shoot_mode < SHOOT_READY)
         {
             shoot_control.given_current = 0;
         }
@@ -230,19 +209,29 @@ int16_t shoot_control_loop(void)
   */
 static void shoot_set_mode(void)
 {
-    const ros_aim_data_t *vision = get_vision_data_point();
-    static bool_t last_shoot_suggest = 0;
-    bool_t shoot_suggest = 0;
+    const ros_nav_cmd_t  *nav = get_ros_nav_cmd_point();
+    static bool_t last_shoot_cmd = 0;
+    bool_t shoot_cmd = 0;
+    bool_t fric_on = 0;
 
-    if (vision != NULL && vision->target_valid && vision->shoot_suggest)
+    /* ROS navigation path (CMD_NAV_DATA 0x02):
+     * bit2 -> friction on, bit3 -> shoot command */
+    if (nav != NULL)
     {
-        shoot_suggest = 1;
+        if (nav->nav_ctrl_flags & NAV_FLAG_FRIC_ON)
+        {
+            fric_on = 1;
+        }
+        if (nav->nav_ctrl_flags & NAV_FLAG_SHOOT)
+        {
+            shoot_cmd = 1;
+            fric_on = 1;   /* shooting implies friction wheels on */
+        }
     }
 
-    if (!shoot_suggest)
+    if (!fric_on)
     {
         shoot_control.shoot_mode = SHOOT_STOP;
-        shoot_control.key_time = 0;
     }
     else if (shoot_control.shoot_mode == SHOOT_STOP)
     {
@@ -251,44 +240,30 @@ static void shoot_set_mode(void)
 
     if(shoot_control.shoot_mode == SHOOT_READY_FRIC && shoot_control.fric1_ramp.out == shoot_control.fric1_ramp.max_value && shoot_control.fric2_ramp.out == shoot_control.fric2_ramp.max_value)
     {
-        shoot_control.shoot_mode = SHOOT_READY_BULLET;
-    }
-    else if(shoot_control.shoot_mode == SHOOT_READY_BULLET && shoot_control.key == SWITCH_TRIGGER_ON)
-    {
         shoot_control.shoot_mode = SHOOT_READY;
-    }
-    else if(shoot_control.shoot_mode == SHOOT_READY && shoot_control.key == SWITCH_TRIGGER_OFF)
-    {
-        shoot_control.shoot_mode = SHOOT_READY_BULLET;
     }
     else if(shoot_control.shoot_mode == SHOOT_READY)
     {
-        if (shoot_suggest && !last_shoot_suggest)
+        if (shoot_cmd && !last_shoot_cmd)
         {
             shoot_control.shoot_mode = SHOOT_BULLET;
         }
     }
     else if(shoot_control.shoot_mode == SHOOT_DONE)
     {
-        if(shoot_control.key == SWITCH_TRIGGER_OFF)
+        if(shoot_cmd)
         {
-            shoot_control.key_time++;
-            if(shoot_control.key_time > SHOOT_DONE_KEY_OFF_TIME)
-            {
-                shoot_control.key_time = 0;
-                shoot_control.shoot_mode = SHOOT_READY_BULLET;
-            }
+            shoot_control.shoot_mode = SHOOT_BULLET;
         }
         else
         {
-            shoot_control.key_time = 0;
-            shoot_control.shoot_mode = SHOOT_BULLET;
+            shoot_control.shoot_mode = SHOOT_READY;
         }
     }
     
 
 
-    if (shoot_suggest)
+    if (shoot_cmd)
     {
         if (shoot_control.rc_s_time < PRESS_LONG_TIME)
         {
@@ -308,7 +283,7 @@ static void shoot_set_mode(void)
         }
         else if(shoot_control.shoot_mode == SHOOT_CONTINUE_BULLET)
         {
-            shoot_control.shoot_mode =SHOOT_READY_BULLET;
+            shoot_control.shoot_mode =SHOOT_READY;
         }
     }
 
@@ -317,16 +292,17 @@ static void shoot_set_mode(void)
     {
         if(shoot_control.shoot_mode == SHOOT_BULLET || shoot_control.shoot_mode == SHOOT_CONTINUE_BULLET)
         {
-            shoot_control.shoot_mode =SHOOT_READY_BULLET;
+            shoot_control.shoot_mode = SHOOT_READY;
         }
     }
+
     //�����̨״̬�� ����״̬���͹ر����
     if (gimbal_cmd_to_shoot_stop())
     {
         shoot_control.shoot_mode = SHOOT_STOP;
     }
 
-    last_shoot_suggest = shoot_suggest;
+    last_shoot_cmd = shoot_cmd;
 }
 /**
   * @brief          ������ݸ���
@@ -370,56 +346,10 @@ static void shoot_feedback_update(void)
 
     //���������Ƕ�
     shoot_control.angle = (shoot_control.ecd_count * ECD_RANGE + shoot_control.shoot_motor_measure->ecd) * MOTOR_ECD_TO_ANGLE;
-    //΢������
-    shoot_control.key = BUTTEN_TRIG_PIN;
-    //ROS only: disable RC mouse edge-trigger path.
-    shoot_control.last_press_l = shoot_control.press_l;
-    shoot_control.last_press_r = shoot_control.press_r;
-    shoot_control.press_l = 0;
-    shoot_control.press_r = 0;
-    //������ʱ
-    if (shoot_control.press_l)
-    {
-        if (shoot_control.press_l_time < PRESS_LONG_TIME)
-        {
-            shoot_control.press_l_time++;
-        }
-    }
-    else
-    {
-        shoot_control.press_l_time = 0;
-    }
-
-    if (shoot_control.press_r)
-    {
-        if (shoot_control.press_r_time < PRESS_LONG_TIME)
-        {
-            shoot_control.press_r_time++;
-        }
-    }
-    else
-    {
-        shoot_control.press_r_time = 0;
-    }
-
-    //Keep default friction cap in ROS mode.
-    static uint16_t up_time = 0;
-
-    if (up_time > 0)
-    {
-        shoot_control.fric1_ramp.max_value = FRIC_UP;
-        shoot_control.fric2_ramp.max_value = FRIC_UP;
-		shoot_control.fric3_ramp.max_value = FRIC_UP;
-        shoot_control.fric4_ramp.max_value = FRIC_UP;
-        up_time--;
-    }
-    else
-    {
-        shoot_control.fric1_ramp.max_value = FRIC_DOWN;
-        shoot_control.fric2_ramp.max_value = FRIC_DOWN;
-		shoot_control.fric3_ramp.max_value = FRIC_DOWN;
-        shoot_control.fric4_ramp.max_value = FRIC_DOWN;
-    }
+    shoot_control.fric1_ramp.max_value = FRIC_DOWN;
+    shoot_control.fric2_ramp.max_value = FRIC_DOWN;
+	shoot_control.fric3_ramp.max_value = FRIC_DOWN;
+    shoot_control.fric4_ramp.max_value = FRIC_DOWN;
 
 
 }
@@ -464,11 +394,6 @@ static void shoot_bullet_control(void)
         shoot_control.set_angle = rad_format(shoot_control.angle + PI_TEN);
         shoot_control.move_flag = 1;
     }
-    if(shoot_control.key == SWITCH_TRIGGER_OFF)
-    {
-
-        shoot_control.shoot_mode = SHOOT_DONE;
-    }
     //����Ƕ��ж�
     if (rad_format(shoot_control.set_angle - shoot_control.angle) > 0.05f)
     {
@@ -479,6 +404,7 @@ static void shoot_bullet_control(void)
     else
     {
         shoot_control.move_flag = 0;
+        shoot_control.shoot_mode = SHOOT_DONE;
     }
 }
 

@@ -36,7 +36,6 @@ static fifo_s_t  vision_fifo;
 static uint8_t   vision_fifo_buf[VISION_FIFO_BUF_LENGTH];
 
 /* ---------- data instances ---------- */
-static ros_aim_data_t ros_aim_data = {0};
 static ros_nav_cmd_t  ros_nav_cmd  = {0};
 
 /* ---------- diagnostics ---------- */
@@ -57,14 +56,6 @@ static uart1_diag_t diag = {0};
 
 static void vision_link_failsafe_clear(void)
 {
-    ros_aim_data.yaw_offset = 0.0f;
-    ros_aim_data.pitch_offset = 0.0f;
-    ros_aim_data.target_valid = 0U;
-    ros_aim_data.shoot_suggest = 0U;
-    ros_aim_data.distance_mm = 0U;
-    ros_aim_data.target_id = 0U;
-    memset(ros_aim_data.reserved, 0, sizeof(ros_aim_data.reserved));
-
     ros_nav_cmd.vx = 0.0f;
     ros_nav_cmd.vy = 0.0f;
     ros_nav_cmd.vz = 0.0f;
@@ -156,22 +147,7 @@ static uint8_t  parse_buf[ROS_FRAME_MAX_PAYLOAD];
 
 static void ros_handle_frame(uint8_t cmd, const uint8_t *payload, uint8_t len)
 {
-    if (cmd == CMD_AIM_DATA && len == 14)
-    {
-        memcpy(&ros_aim_data.yaw_offset,   &payload[0], 4);
-        memcpy(&ros_aim_data.pitch_offset, &payload[4], 4);
-
-        uint8_t flags = payload[8];
-        ros_aim_data.target_valid  = (flags & 0x01U) ? 1U : 0U;
-        ros_aim_data.shoot_suggest = (flags & 0x02U) ? 1U : 0U;
-
-        ros_aim_data.distance_mm = (uint16_t)(payload[9] | ((uint16_t)payload[10] << 8));
-        ros_aim_data.target_id   = payload[11];
-
-        detect_hook(VISION_TOE);
-        diag.frame_ok_count++;
-    }
-    else if (cmd == CMD_HEARTBEAT && len == 0)
+    if (cmd == CMD_HEARTBEAT && len == 0)
     {
         detect_hook(VISION_TOE);
         diag.frame_ok_count++;
@@ -265,14 +241,6 @@ static void ros_parse_fifo(void)
             break;
         }
     }
-}
-
-/* ================================================================
- *  get_vision_data_point — accessor for downstream consumers
- * ================================================================ */
-const ros_aim_data_t *get_vision_data_point(void)
-{
-    return &ros_aim_data;
 }
 
 /* ================================================================

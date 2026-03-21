@@ -5,7 +5,6 @@
 
 #include "gimbal_behaviour.h"
 #include "vision_rx_task.h"
-#define ROS_HOST_CHASSIS_DEBUG 1
 /**
   * @brief          when chassis behaviour mode is CHASSIS_ZERO_FORCE, the function is called
   *                 and chassis control mode is raw. The raw chassis control mode means set value

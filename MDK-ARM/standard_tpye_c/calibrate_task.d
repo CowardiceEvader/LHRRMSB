@@ -69,4 +69,3 @@ standard_tpye_c\calibrate_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_
 standard_tpye_c\calibrate_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd.h
 standard_tpye_c\calibrate_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_usb.h
 standard_tpye_c\calibrate_task.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pcd_ex.h
-standard_tpye_c\calibrate_task.o: ..\application\auto_aim_task.h
