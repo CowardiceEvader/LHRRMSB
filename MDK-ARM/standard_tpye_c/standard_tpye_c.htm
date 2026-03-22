@@ -3,7 +3,7 @@
 <title>Static Call Graph - [standard_tpye_c\standard_tpye_c.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image standard_tpye_c\standard_tpye_c.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060300: Last Updated: Sun Mar 22 10:53:55 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060300: Last Updated: Sun Mar 22 12:13:37 2026
 <BR><P>
 <H3>Maximum Stack Usage =        480 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -394,15 +394,15 @@ Global Symbols
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
 </UL>
 <P><STRONG><a name="[91]"></a>arm_cos_f32</STRONG> (Thumb, 108 bytes, Stack size 0 bytes, arm_cos_f32.o(.text))
-<BR><BR>[Called By]<UL><LI><a href="#[90]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AHRS_cosf
-<LI><a href="#[223]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_feedback_update
+<BR><BR>[Called By]<UL><LI><a href="#[223]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_feedback_update
 <LI><a href="#[20f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_set_contorl
+<LI><a href="#[90]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AHRS_cosf
 </UL>
 
 <P><STRONG><a name="[99]"></a>arm_sin_f32</STRONG> (Thumb, 104 bytes, Stack size 0 bytes, arm_sin_f32.o(.text))
-<BR><BR>[Called By]<UL><LI><a href="#[95]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AHRS_sinf
-<LI><a href="#[223]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_feedback_update
+<BR><BR>[Called By]<UL><LI><a href="#[223]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_feedback_update
 <LI><a href="#[20f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_set_contorl
+<LI><a href="#[95]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AHRS_sinf
 </UL>
 
 <P><STRONG><a name="[7a]"></a>__aeabi_uldivmod</STRONG> (Thumb, 98 bytes, Stack size 40 bytes, uldiv.o(.text))
@@ -420,12 +420,12 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[1e5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;flash_read
 <LI><a href="#[267]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;prvCopyDataToQueue
 <LI><a href="#[266]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;prvCopyDataFromQueue
+<LI><a href="#[1e6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;cali_data_write
 <LI><a href="#[1ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fifo_s_puts_noprotect
 <LI><a href="#[21a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fifo_s_gets
 <LI><a href="#[1ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fifo_s_puts
 <LI><a href="#[283]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;referee_data_solve
 <LI><a href="#[193]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OLED_LOGO
-<LI><a href="#[1e6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;cali_data_write
 </UL>
 
 <P><STRONG><a name="[17e]"></a>__aeabi_memcpy4</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memcpya.o(.text))
@@ -502,18 +502,18 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[1fe]"></a>__aeabi_f2d</STRONG> (Thumb, 38 bytes, Stack size 0 bytes, f2d.o(.text))
-<BR><BR>[Called By]<UL><LI><a href="#[292]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;trigger_motor_turn_back
-<LI><a href="#[226]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_init_control
+<BR><BR>[Called By]<UL><LI><a href="#[226]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_init_control
 <LI><a href="#[22d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_behavour_set
 <LI><a href="#[1fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_control_loop
 <LI><a href="#[201]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_power_control
+<LI><a href="#[292]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;trigger_motor_turn_back
 </UL>
 
 <P><STRONG><a name="[2c2]"></a>__aeabi_cdcmpeq</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, cdcmple.o(.text), UNUSED)
 
 <P><STRONG><a name="[22e]"></a>__aeabi_cdcmple</STRONG> (Thumb, 48 bytes, Stack size 0 bytes, cdcmple.o(.text))
-<BR><BR>[Called By]<UL><LI><a href="#[292]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;trigger_motor_turn_back
-<LI><a href="#[22d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_behavour_set
+<BR><BR>[Called By]<UL><LI><a href="#[22d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_behavour_set
+<LI><a href="#[292]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;trigger_motor_turn_back
 </UL>
 
 <P><STRONG><a name="[1d5]"></a>__aeabi_cdrcmple</STRONG> (Thumb, 48 bytes, Stack size 0 bytes, cdrcmple.o(.text))
@@ -1241,8 +1241,8 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[eb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vTaskNotifyGiveFromISR
 <LI><a href="#[ea]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;xTaskGetSchedulerState
-<LI><a href="#[ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_cmd_spi_dma
 <LI><a href="#[d6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;detect_hook
+<LI><a href="#[ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_cmd_spi_dma
 </UL>
 <BR>[Called By]<UL><LI><a href="#[bb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GPIO_EXTI_IRQHandler
 </UL>
@@ -1971,6 +1971,8 @@ Global Symbols
 <LI><a href="#[170]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ulTaskNotifyTake
 <LI><a href="#[16d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pcTaskGetName
 <LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;osDelay
+<LI><a href="#[16c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PID_init
+<LI><a href="#[16f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SPI1_DMA_init
 <LI><a href="#[16a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ist8310_init
 <LI><a href="#[175]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_angle
 <LI><a href="#[173]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;BMI088_temperature_read_over
@@ -1982,8 +1984,6 @@ Global Symbols
 <LI><a href="#[92]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;AHRS_init
 <LI><a href="#[174]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_temp_control
 <LI><a href="#[16b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_cali_slove
-<LI><a href="#[16c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PID_init
-<LI><a href="#[16f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SPI1_DMA_init
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> freertos.o(.constdata)
 </UL>
@@ -2357,12 +2357,12 @@ Global Symbols
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
 </UL>
 <P><STRONG><a name="[200]"></a>PID_calc</STRONG> (Thumb, 492 bytes, Stack size 0 bytes, pid.o(i.PID_calc))
-<BR><BR>[Called By]<UL><LI><a href="#[174]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_temp_control
-<LI><a href="#[240]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_control_loop
-<LI><a href="#[232]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_motor_relative_angle_control
+<BR><BR>[Called By]<UL><LI><a href="#[232]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_motor_relative_angle_control
 <LI><a href="#[231]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_motor_absolute_angle_control
 <LI><a href="#[20f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_set_contorl
 <LI><a href="#[1fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_control_loop
+<LI><a href="#[174]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;imu_temp_control
+<LI><a href="#[240]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_control_loop
 </UL>
 
 <P><STRONG><a name="[239]"></a>PID_clear</STRONG> (Thumb, 72 bytes, Stack size 0 bytes, pid.o(i.PID_clear))
@@ -2371,9 +2371,9 @@ Global Symbols
 
 <P><STRONG><a name="[16c]"></a>PID_init</STRONG> (Thumb, 92 bytes, Stack size 0 bytes, pid.o(i.PID_init))
 <BR><BR>[Called By]<UL><LI><a href="#[70]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;INS_task
-<LI><a href="#[23e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_init
 <LI><a href="#[233]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_init
 <LI><a href="#[205]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_init
+<LI><a href="#[23e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_init
 </UL>
 
 <P><STRONG><a name="[13f]"></a>RTC_EnterInitMode</STRONG> (Thumb, 62 bytes, Stack size 16 bytes, stm32f4xx_hal_rtc.o(i.RTC_EnterInitMode))
@@ -2457,8 +2457,8 @@ Global Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 56<LI>Call Chain = USART6_IRQHandler &rArr; HAL_UART_IRQHandler &rArr; UART_Receive_IT
 </UL>
 <BR>[Calls]<UL><LI><a href="#[157]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_UART_IRQHandler
-<LI><a href="#[1ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fifo_s_puts
 <LI><a href="#[d6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;detect_hook
+<LI><a href="#[1ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fifo_s_puts
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
 </UL>
@@ -2902,11 +2902,11 @@ Global Symbols
 <P><STRONG><a name="[1ff]"></a>__hardfp_fabs</STRONG> (Thumb, 20 bytes, Stack size 8 bytes, fabs.o(i.__hardfp_fabs))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = __hardfp_fabs
 </UL>
-<BR>[Called By]<UL><LI><a href="#[292]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;trigger_motor_turn_back
-<LI><a href="#[226]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_init_control
+<BR>[Called By]<UL><LI><a href="#[226]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_init_control
 <LI><a href="#[22d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_behavour_set
 <LI><a href="#[1fc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_control_loop
 <LI><a href="#[201]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_power_control
+<LI><a href="#[292]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;trigger_motor_turn_back
 </UL>
 
 <P><STRONG><a name="[98]"></a>__hardfp_sqrtf</STRONG> (Thumb, 58 bytes, Stack size 16 bytes, sqrtf_full.o(i.__hardfp_sqrtf))
@@ -3149,10 +3149,10 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[215]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;xTaskGetTickCount
 </UL>
 <BR>[Called By]<UL><LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;oled_task
+<LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_CAN_RxFifo0MsgPendingCallback
 <LI><a href="#[28a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ros_handle_frame
 <LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART6_IRQHandler
 <LI><a href="#[e9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GPIO_EXTI_Callback
-<LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_CAN_RxFifo0MsgPendingCallback
 </UL>
 
 <P><STRONG><a name="[6e]"></a>detect_task</STRONG> (Thumb, 628 bytes, Stack size 0 bytes, detect_task.o(i.detect_task))
@@ -3333,13 +3333,13 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[209]"></a>get_pitch_motor_point</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, gimbal_task.o(i.get_pitch_motor_point))
-<BR><BR>[Called By]<UL><LI><a href="#[28c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ros_send_status_report
-<LI><a href="#[205]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_init
+<BR><BR>[Called By]<UL><LI><a href="#[205]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_init
+<LI><a href="#[28c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ros_send_status_report
 </UL>
 
 <P><STRONG><a name="[20c]"></a>get_robot_id</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, referee.o(i.get_robot_id))
-<BR><BR>[Called By]<UL><LI><a href="#[28c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ros_send_status_report
-<LI><a href="#[201]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_power_control
+<BR><BR>[Called By]<UL><LI><a href="#[201]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_power_control
+<LI><a href="#[28c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ros_send_status_report
 </UL>
 
 <P><STRONG><a name="[28d]"></a>get_robot_remain_HP</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, referee.o(i.get_robot_remain_HP))
@@ -3347,9 +3347,9 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[206]"></a>get_ros_nav_cmd_point</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, vision_rx_task.o(i.get_ros_nav_cmd_point))
-<BR><BR>[Called By]<UL><LI><a href="#[293]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_set_mode
-<LI><a href="#[233]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_init
+<BR><BR>[Called By]<UL><LI><a href="#[233]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_init
 <LI><a href="#[205]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_init
+<LI><a href="#[293]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_set_mode
 </UL>
 
 <P><STRONG><a name="[29f]"></a>get_shoot_heat0_limit_and_heat0</STRONG> (Thumb, 14 bytes, Stack size 0 bytes, referee.o(i.get_shoot_heat0_limit_and_heat0))
@@ -3377,8 +3377,8 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[208]"></a>get_yaw_motor_point</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, gimbal_task.o(i.get_yaw_motor_point))
-<BR><BR>[Called By]<UL><LI><a href="#[28c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ros_send_status_report
-<LI><a href="#[205]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_init
+<BR><BR>[Called By]<UL><LI><a href="#[205]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_init
+<LI><a href="#[28c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ros_send_status_report
 </UL>
 
 <P><STRONG><a name="[224]"></a>gimbal_behaviour_control_set</STRONG> (Thumb, 156 bytes, Stack size 16 bytes, gimbal_behaviour.o(i.gimbal_behaviour_control_set))
@@ -3412,8 +3412,6 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[213]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vTaskDelay
 <LI><a href="#[1f1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uxTaskGetStackHighWaterMark
-<LI><a href="#[23e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_init
-<LI><a href="#[240]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_control_loop
 <LI><a href="#[23d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_set_mode
 <LI><a href="#[23b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_set_control
 <LI><a href="#[23a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_ros_command_active
@@ -3424,6 +3422,8 @@ Global Symbols
 <LI><a href="#[222]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_apply_safe_defaults
 <LI><a href="#[20d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;toe_is_error
 <LI><a href="#[b8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CAN_cmd_gimbal
+<LI><a href="#[23e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_init
+<LI><a href="#[240]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_control_loop
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> freertos.o(.constdata)
 </UL>
@@ -3530,12 +3530,12 @@ Global Symbols
 <BR>[Address Reference Count : 1]<UL><LI> freertos.o(.constdata)
 </UL>
 <P><STRONG><a name="[204]"></a>loop_fp32_constrain</STRONG> (Thumb, 96 bytes, Stack size 0 bytes, user_lib.o(i.loop_fp32_constrain))
-<BR><BR>[Called By]<UL><LI><a href="#[291]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_bullet_control
-<LI><a href="#[221]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_absolute_angle_limit
+<BR><BR>[Called By]<UL><LI><a href="#[221]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_absolute_angle_limit
 <LI><a href="#[21f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_PID_calc
 <LI><a href="#[22a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_ros_absolute_control
 <LI><a href="#[20f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_set_contorl
 <LI><a href="#[203]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_feedback_update
+<LI><a href="#[291]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_bullet_control
 </UL>
 
 <P><STRONG><a name="[5e]"></a>main</STRONG> (Thumb, 128 bytes, Stack size 0 bytes, main.o(i.main))
@@ -3579,6 +3579,9 @@ Global Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 160<LI>Call Chain = oled_task &rArr; OLED_LOGO &rArr; OLED_refresh_gram &rArr; OLED_set_pos &rArr; oled_write_byte &rArr; bsp_I2C_master_transmit &rArr; HAL_I2C_Master_Transmit &rArr; I2C_MasterRequestWrite &rArr; I2C_WaitOnMasterAddressFlagUntilTimeout
 </UL>
 <BR>[Calls]<UL><LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;osDelay
+<LI><a href="#[250]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_error_list_point
+<LI><a href="#[20d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;toe_is_error
+<LI><a href="#[d6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;detect_hook
 <LI><a href="#[252]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_battery_percentage
 <LI><a href="#[19e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OLED_show_string
 <LI><a href="#[1a2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OLED_show_graphic
@@ -3589,9 +3592,6 @@ Global Symbols
 <LI><a href="#[199]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OLED_init
 <LI><a href="#[196]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OLED_check_ack
 <LI><a href="#[193]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;OLED_LOGO
-<LI><a href="#[250]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_error_list_point
-<LI><a href="#[20d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;toe_is_error
-<LI><a href="#[d6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;detect_hook
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> freertos.o(.constdata)
 </UL>
@@ -3687,10 +3687,10 @@ Global Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 72<LI>Call Chain = referee_usart_task &rArr; osDelay &rArr; vTaskDelay &rArr; xTaskResumeAll &rArr; xTaskIncrementTick
 </UL>
 <BR>[Calls]<UL><LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;osDelay
+<LI><a href="#[289]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;usart6_init
 <LI><a href="#[288]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fifo_s_init
 <LI><a href="#[284]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;referee_unpack_fifo_data
 <LI><a href="#[244]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;init_referee_struct_data
-<LI><a href="#[289]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;usart6_init
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> freertos.o(.constdata)
 </UL>
@@ -3719,12 +3719,12 @@ Global Symbols
 <LI><a href="#[29a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fric3_on
 <LI><a href="#[299]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fric2_on
 <LI><a href="#[298]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fric1_on
+<LI><a href="#[200]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PID_calc
 <LI><a href="#[296]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ramp_calc
 <LI><a href="#[292]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;trigger_motor_turn_back
 <LI><a href="#[293]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_set_mode
 <LI><a href="#[294]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_feedback_update
 <LI><a href="#[291]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_bullet_control
-<LI><a href="#[200]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PID_calc
 </UL>
 <BR>[Called By]<UL><LI><a href="#[6f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_task
 </UL>
@@ -3732,11 +3732,11 @@ Global Symbols
 <P><STRONG><a name="[23e]"></a>shoot_init</STRONG> (Thumb, 264 bytes, Stack size 8 bytes, shoot.o(i.shoot_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = shoot_init
 </UL>
-<BR>[Calls]<UL><LI><a href="#[29e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ramp_init
-<LI><a href="#[294]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_feedback_update
-<LI><a href="#[16c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PID_init
+<BR>[Calls]<UL><LI><a href="#[16c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PID_init
 <LI><a href="#[29c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_trigger_motor_measure_point
 <LI><a href="#[29d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_trigger_dual_motor_measure_point
+<LI><a href="#[29e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ramp_init
+<LI><a href="#[294]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_feedback_update
 </UL>
 <BR>[Called By]<UL><LI><a href="#[6f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_task
 </UL>
@@ -3754,9 +3754,9 @@ Global Symbols
 <LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;oled_task
 <LI><a href="#[6f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_task
 <LI><a href="#[6d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_task
-<LI><a href="#[293]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_set_mode
 <LI><a href="#[23a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_ros_command_active
 <LI><a href="#[201]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;chassis_power_control
+<LI><a href="#[293]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_set_mode
 </UL>
 
 <P><STRONG><a name="[170]"></a>ulTaskNotifyTake</STRONG> (Thumb, 108 bytes, Stack size 16 bytes, tasks.o(i.ulTaskNotifyTake))
@@ -4012,11 +4012,11 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[bd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
 <LI><a href="#[161]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_UART_Receive_DMA
 <LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;osDelay
+<LI><a href="#[20d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;toe_is_error
 <LI><a href="#[2ab]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vision_link_failsafe_clear
 <LI><a href="#[28c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ros_send_status_report
 <LI><a href="#[28b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ros_parse_fifo
 <LI><a href="#[288]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fifo_s_init
-<LI><a href="#[20d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;toe_is_error
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> freertos.o(.constdata)
 </UL>
@@ -5105,8 +5105,8 @@ Local Symbols
 <P><STRONG><a name="[21f]"></a>gimbal_PID_calc</STRONG> (Thumb, 174 bytes, Stack size 24 bytes, gimbal_task.o(i.gimbal_PID_calc))
 <BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = gimbal_PID_calc
 </UL>
-<BR>[Calls]<UL><LI><a href="#[220]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;abs_limit
-<LI><a href="#[204]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;loop_fp32_constrain
+<BR>[Calls]<UL><LI><a href="#[204]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;loop_fp32_constrain
+<LI><a href="#[220]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;abs_limit
 </UL>
 <BR>[Called By]<UL><LI><a href="#[232]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_motor_relative_angle_control
 <LI><a href="#[231]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_motor_absolute_angle_control
@@ -5161,9 +5161,7 @@ Local Symbols
 <P><STRONG><a name="[233]"></a>gimbal_init</STRONG> (Thumb, 358 bytes, Stack size 8 bytes, gimbal_task.o(i.gimbal_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = gimbal_init &rArr; gimbal_feedback_update
 </UL>
-<BR>[Calls]<UL><LI><a href="#[236]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_gyro_data_point
-<LI><a href="#[239]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PID_clear
-<LI><a href="#[223]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_feedback_update
+<BR>[Calls]<UL><LI><a href="#[223]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_feedback_update
 <LI><a href="#[237]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_PID_init
 <LI><a href="#[238]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_PID_clear
 <LI><a href="#[206]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_ros_nav_cmd_point
@@ -5171,6 +5169,8 @@ Local Symbols
 <LI><a href="#[16c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PID_init
 <LI><a href="#[234]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_yaw_gimbal_motor_measure_point
 <LI><a href="#[235]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_pitch_gimbal_motor_measure_point
+<LI><a href="#[236]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_gyro_data_point
+<LI><a href="#[239]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PID_clear
 </UL>
 <BR>[Called By]<UL><LI><a href="#[6f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_task
 </UL>
@@ -5277,8 +5277,8 @@ Local Symbols
 <P><STRONG><a name="[291]"></a>shoot_bullet_control</STRONG> (Thumb, 128 bytes, Stack size 8 bytes, shoot.o(i.shoot_bullet_control))
 <BR><BR>[Stack]<UL><LI>Max Depth = 40<LI>Call Chain = shoot_bullet_control &rArr; trigger_motor_turn_back &rArr; __hardfp_fabs
 </UL>
-<BR>[Calls]<UL><LI><a href="#[292]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;trigger_motor_turn_back
-<LI><a href="#[204]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;loop_fp32_constrain
+<BR>[Calls]<UL><LI><a href="#[204]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;loop_fp32_constrain
+<LI><a href="#[292]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;trigger_motor_turn_back
 </UL>
 <BR>[Called By]<UL><LI><a href="#[240]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_control_loop
 </UL>
@@ -5291,10 +5291,10 @@ Local Symbols
 <P><STRONG><a name="[293]"></a>shoot_set_mode</STRONG> (Thumb, 324 bytes, Stack size 16 bytes, shoot.o(i.shoot_set_mode))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = shoot_set_mode
 </UL>
-<BR>[Calls]<UL><LI><a href="#[29f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_shoot_heat0_limit_and_heat0
-<LI><a href="#[2a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_cmd_to_shoot_stop
+<BR>[Calls]<UL><LI><a href="#[2a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;gimbal_cmd_to_shoot_stop
 <LI><a href="#[206]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_ros_nav_cmd_point
 <LI><a href="#[20d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;toe_is_error
+<LI><a href="#[29f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_shoot_heat0_limit_and_heat0
 </UL>
 <BR>[Called By]<UL><LI><a href="#[240]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;shoot_control_loop
 </UL>
@@ -5341,12 +5341,12 @@ Local Symbols
 <P><STRONG><a name="[28c]"></a>ros_send_status_report</STRONG> (Thumb, 136 bytes, Stack size 32 bytes, vision_rx_task.o(i.ros_send_status_report))
 <BR><BR>[Stack]<UL><LI>Max Depth = 124<LI>Call Chain = ros_send_status_report &rArr; uart1_dma_send &rArr; HAL_UART_Transmit_DMA &rArr; HAL_DMA_Start_IT &rArr; DMA_SetConfig
 </UL>
-<BR>[Calls]<UL><LI><a href="#[28f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart1_dma_send
-<LI><a href="#[28e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ros_crc8
-<LI><a href="#[28d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_robot_remain_HP
-<LI><a href="#[208]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_yaw_motor_point
+<BR>[Calls]<UL><LI><a href="#[208]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_yaw_motor_point
 <LI><a href="#[209]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_pitch_motor_point
 <LI><a href="#[20c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_robot_id
+<LI><a href="#[28f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart1_dma_send
+<LI><a href="#[28e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ros_crc8
+<LI><a href="#[28d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_robot_remain_HP
 </UL>
 <BR>[Called By]<UL><LI><a href="#[76]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;vision_rx_task
 </UL>
