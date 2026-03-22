@@ -95,11 +95,11 @@ void shoot_init(void)
 	PID_init(&shoot_control.trigger_dual_motor_pid, PID_POSITION, Trigger_speed_pid, TRIGGER_READY_PID_MAX_OUT, TRIGGER_READY_PID_MAX_IOUT);
     //��������
     shoot_feedback_update();
-    ramp_init(&shoot_control.fric1_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
-    ramp_init(&shoot_control.fric2_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
+    ramp_init(&shoot_control.fric1_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_UP, FRIC_OFF);
+    ramp_init(&shoot_control.fric2_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_UP, FRIC_OFF);
 	//˫��̨�����ֵ����ʼ��
-	ramp_init(&shoot_control.fric3_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
-    ramp_init(&shoot_control.fric4_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
+	ramp_init(&shoot_control.fric3_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_UP, FRIC_OFF);
+    ramp_init(&shoot_control.fric4_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_UP, FRIC_OFF);
 	
     shoot_control.fric_pwm1 = FRIC_OFF;
     shoot_control.fric_pwm2 = FRIC_OFF;
@@ -337,10 +337,10 @@ static void shoot_feedback_update(void)
 
     //���������Ƕ�
     shoot_control.angle = (shoot_control.ecd_count * ECD_RANGE + shoot_control.shoot_motor_measure->ecd) * MOTOR_ECD_TO_ANGLE;
-    shoot_control.fric1_ramp.max_value = FRIC_DOWN;
-    shoot_control.fric2_ramp.max_value = FRIC_DOWN;
-	shoot_control.fric3_ramp.max_value = FRIC_DOWN;
-    shoot_control.fric4_ramp.max_value = FRIC_DOWN;
+    shoot_control.fric1_ramp.max_value = FRIC_UP;
+    shoot_control.fric2_ramp.max_value = FRIC_UP;
+	shoot_control.fric3_ramp.max_value = FRIC_UP;
+    shoot_control.fric4_ramp.max_value = FRIC_UP;
 
 
 }
