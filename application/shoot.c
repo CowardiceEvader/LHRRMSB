@@ -210,7 +210,6 @@ int16_t shoot_control_loop(void)
 static void shoot_set_mode(void)
 {
     const ros_nav_cmd_t  *nav = get_ros_nav_cmd_point();
-    static bool_t last_shoot_cmd = 0;
     bool_t shoot_cmd = 0;
     bool_t fric_on = 0;
 
@@ -244,7 +243,7 @@ static void shoot_set_mode(void)
     }
     else if(shoot_control.shoot_mode == SHOOT_READY)
     {
-        if (shoot_cmd && !last_shoot_cmd)
+        if (shoot_cmd)
         {
             shoot_control.shoot_mode = SHOOT_BULLET;
         }
@@ -288,21 +287,13 @@ static void shoot_set_mode(void)
     }
 
     get_shoot_heat0_limit_and_heat0(&shoot_control.heat_limit, &shoot_control.heat);
-    if(!toe_is_error(REFEREE_TOE) && (shoot_control.heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.heat_limit))
+    if (!toe_is_error(REFEREE_TOE) && (shoot_control.heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.heat_limit))
     {
-        if(shoot_control.shoot_mode == SHOOT_BULLET || shoot_control.shoot_mode == SHOOT_CONTINUE_BULLET)
+        if (shoot_control.shoot_mode == SHOOT_BULLET || shoot_control.shoot_mode == SHOOT_CONTINUE_BULLET)
         {
             shoot_control.shoot_mode = SHOOT_READY;
         }
     }
-
-    //�����̨״̬�� ����״̬���͹ر����
-    if (gimbal_cmd_to_shoot_stop())
-    {
-        shoot_control.shoot_mode = SHOOT_STOP;
-    }
-
-    last_shoot_cmd = shoot_cmd;
 }
 /**
   * @brief          ������ݸ���

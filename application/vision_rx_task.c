@@ -23,6 +23,7 @@
 #include "detect_task.h"
 #include "referee.h"
 #include "gimbal_task.h"
+#include "shoot.h"
 
 /* ---------- extern hardware handles ---------- */
 extern UART_HandleTypeDef huart1;
@@ -37,6 +38,8 @@ static uint8_t   vision_fifo_buf[VISION_FIFO_BUF_LENGTH];
 
 /* ---------- data instances ---------- */
 static ros_nav_cmd_t  ros_nav_cmd  = {0};
+static uint8_t        ros_nav_seen = 0U;
+static uint32_t       ros_nav_last_tick = 0U;
 
 /* ---------- diagnostics ---------- */
 typedef struct
@@ -54,6 +57,32 @@ typedef struct
 
 static uart1_diag_t diag = {0};
 
+static uint16_t ros_nav_cmd_age_ms_internal(uint32_t now)
+{
+    if (ros_nav_last_tick == 0U)
+    {
+        return 0xFFFFU;
+    }
+
+    uint32_t age = now - ros_nav_last_tick;
+    if (age > 0xFFFFU)
+    {
+        age = 0xFFFFU;
+    }
+
+    return (uint16_t)age;
+}
+
+static uint8_t ros_nav_cmd_fresh_internal(uint32_t now)
+{
+    if (!ros_nav_seen || ros_nav_last_tick == 0U)
+    {
+        return 0U;
+    }
+
+    return ((now - ros_nav_last_tick) < ROS_NAV_CMD_TIMEOUT_MS) ? 1U : 0U;
+}
+
 static void vision_link_failsafe_clear(void)
 {
     ros_nav_cmd.vx = 0.0f;
@@ -62,6 +91,7 @@ static void vision_link_failsafe_clear(void)
     ros_nav_cmd.yaw_abs = 0.0f;
     ros_nav_cmd.pitch_abs = 0.0f;
     ros_nav_cmd.nav_ctrl_flags = 0U;
+    ros_nav_seen = 0U;
 }
 
 /* ================================================================
@@ -94,8 +124,8 @@ static void uart1_dma_send(const uint8_t *buf, uint16_t len)
  * ================================================================ */
 static void ros_send_status_report(void)
 {
-    /* frame: SOF_H SOF_L CMD LEN [14 payload] CRC = 19 bytes */
-    static uint8_t tx[19];
+    /* frame: SOF_H SOF_L CMD LEN [21 payload] CRC = 26 bytes */
+    static uint8_t tx[26];
 
     const gimbal_motor_t *yaw_motor   = get_yaw_motor_point();
     const gimbal_motor_t *pitch_motor = get_pitch_motor_point();
@@ -104,26 +134,60 @@ static void ros_send_status_report(void)
     float yaw_abs    = (yaw_motor != NULL) ? yaw_motor->absolute_angle : 0.0f;
     float pitch_abs  = (pitch_motor != NULL) ? pitch_motor->absolute_angle : 0.0f;
     uint8_t robot_id = get_robot_id();
+    uint32_t now     = HAL_GetTick();
+    uint16_t heat_limit = 0U;
+    uint16_t heat = 0U;
+    uint8_t status_flags = 0U;
+
+    get_shoot_heat0_limit_and_heat0(&heat_limit, &heat);
+
+    if (ros_nav_cmd_fresh_internal(now))
+    {
+        status_flags |= ROS_STATUS_NAV_FRESH;
+    }
+    if (!toe_is_error(VISION_TOE))
+    {
+        status_flags |= ROS_STATUS_VISION_ONLINE;
+    }
+    if (!toe_is_error(REFEREE_TOE))
+    {
+        status_flags |= ROS_STATUS_REFEREE_ONLINE;
+        if ((heat + SHOOT_HEAT_REMAIN_VALUE) > heat_limit)
+        {
+            status_flags |= ROS_STATUS_HEAT_BLOCKED;
+        }
+    }
+    if (!ros_nav_cmd_fresh_internal(now))
+    {
+        status_flags |= ROS_STATUS_GIMBAL_HOLD;
+    }
 
     tx[0] = ROS_SOF_H;
     tx[1] = ROS_SOF_L;
     tx[2] = CMD_STATUS_REPORT;
-    tx[3] = 14;
+    tx[3] = 21;
 
-    /* payload at [4..17] */
+    /* payload at [4..24] */
     tx[4] = (uint8_t)(hp & 0xFF);
     tx[5] = (uint8_t)(hp >> 8);
     memcpy(&tx[6],  &yaw_abs,   4);
     memcpy(&tx[10], &pitch_abs,  4);
     tx[14] = robot_id;
     tx[15] = 0;  /* shoot_speed_limit */
-    tx[16] = 0;  /* reserved */
-    tx[17] = 0;
+    tx[16] = (uint8_t)(ros_nav_cmd.seq & 0xFFU);
+    tx[17] = (uint8_t)(ros_nav_cmd.seq >> 8);
+    memcpy(&tx[18], &ros_nav_cmd.timestamp_ms, 4);
+    {
+        uint16_t nav_age_ms = ros_nav_cmd_age_ms_internal(now);
+        tx[22] = (uint8_t)(nav_age_ms & 0xFFU);
+        tx[23] = (uint8_t)(nav_age_ms >> 8);
+    }
+    tx[24] = status_flags;
 
-    /* CRC8 over CMD + LEN + PAYLOAD = tx[2..17] */
-    tx[18] = ros_crc8(&tx[2], 16);
+    /* CRC8 over CMD + LEN + PAYLOAD = tx[2..24] */
+    tx[25] = ros_crc8(&tx[2], 23);
 
-    uart1_dma_send(tx, 19);
+    uart1_dma_send(tx, 26);
 }
 
 /* ================================================================
@@ -152,7 +216,7 @@ static void ros_handle_frame(uint8_t cmd, const uint8_t *payload, uint8_t len)
         detect_hook(VISION_TOE);
         diag.frame_ok_count++;
     }
-    else if (cmd == CMD_NAV_DATA && len == 21)
+    else if (cmd == CMD_NAV_DATA && (len == 21 || len == 27))
     {
         memcpy(&ros_nav_cmd.vx,        &payload[0],  4);
         memcpy(&ros_nav_cmd.vy,        &payload[4],  4);
@@ -160,6 +224,18 @@ static void ros_handle_frame(uint8_t cmd, const uint8_t *payload, uint8_t len)
         memcpy(&ros_nav_cmd.yaw_abs,   &payload[12], 4);
         memcpy(&ros_nav_cmd.pitch_abs, &payload[16], 4);
         ros_nav_cmd.nav_ctrl_flags = payload[20];
+        if (len >= 27)
+        {
+            ros_nav_cmd.seq = (uint16_t)(payload[21] | ((uint16_t)payload[22] << 8));
+            memcpy(&ros_nav_cmd.timestamp_ms, &payload[23], 4);
+        }
+        else
+        {
+            ros_nav_cmd.seq = 0U;
+            ros_nav_cmd.timestamp_ms = 0U;
+        }
+        ros_nav_seen = 1U;
+        ros_nav_last_tick = HAL_GetTick();
 
         detect_hook(VISION_TOE);
         diag.frame_ok_count++;
@@ -251,6 +327,21 @@ const ros_nav_cmd_t *get_ros_nav_cmd_point(void)
     return &ros_nav_cmd;
 }
 
+uint8_t ros_nav_cmd_received(void)
+{
+    return ros_nav_seen;
+}
+
+uint8_t ros_nav_cmd_fresh(void)
+{
+    return ros_nav_cmd_fresh_internal(HAL_GetTick());
+}
+
+uint16_t ros_nav_cmd_age_ms(void)
+{
+    return ros_nav_cmd_age_ms_internal(HAL_GetTick());
+}
+
 /* ================================================================
  *  USART1_IRQHandler — IDLE line → push raw bytes into FIFO
  * ================================================================ */
@@ -317,14 +408,17 @@ void vision_rx_task(void const *argument)
         /* parse all available bytes */
         ros_parse_fifo();
 
-        /* link lost: clear stale commands to enforce safe output */
-        if (toe_is_error(VISION_TOE))
+        /* Separate command freshness from link heartbeat.
+         * HEARTBEAT keeps VISION_TOE online, but only fresh NAV_DATA keeps
+         * motion commands alive. This prevents stale movement commands from
+         * lingering when the upper computer stops sending control frames. */
+        uint32_t now = HAL_GetTick();
+        if (ros_nav_seen && (now - ros_nav_last_tick) >= ROS_NAV_CMD_TIMEOUT_MS)
         {
             vision_link_failsafe_clear();
         }
 
         /* send status report every 50ms */
-        uint32_t now = HAL_GetTick();
         if ((now - last_tx_tick) >= 50U)
         {
             last_tx_tick = now;

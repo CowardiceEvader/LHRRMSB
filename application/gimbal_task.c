@@ -312,24 +312,7 @@ volatile uint8_t dbg_vision_online  = 0;
 
 static bool_t gimbal_ros_command_active(const gimbal_control_t *control)
 {
-    if (control == NULL)
-    {
-        return 0;
-    }
-
-    // If ROS link is offline, force no motion output.
-    if (toe_is_error(VISION_TOE))
-    {
-        return 0;
-    }
-
-    // ROS link is alive — let the behaviour system decide the mode.
-    // Previously only returned 1 when aim_valid or GIMBAL_ABS_VALID,
-    // which zeroed all motor currents (including shoot) when only
-    // chassis commands were active.  The behaviour system already
-    // falls back to GIMBAL_RELATIVE_ANGLE (hold position) when no
-    // gimbal command is present, so it is safe to allow output here.
-    return 1;
+  return (control != NULL);
 }
 
 static void gimbal_apply_safe_defaults(gimbal_control_t *control)
@@ -384,13 +367,6 @@ void gimbal_task(void const *pvParameters)
     //shoot init
     //�����ʼ��
     shoot_init();
-    //wait for all motor online
-    //�жϵ���Ƿ�����
-    while (toe_is_error(YAW_GIMBAL_MOTOR_TOE) || toe_is_error(PITCH_GIMBAL_MOTOR_TOE))
-    {
-        vTaskDelay(GIMBAL_CONTROL_TIME);
-        gimbal_feedback_update(&gimbal_control);             //��̨���ݷ���
-    }
 
     gimbal_apply_safe_defaults(&gimbal_control);
 
@@ -426,16 +402,7 @@ void gimbal_task(void const *pvParameters)
           shoot_can_set_current = 0;
         }
 
-        if (!toe_is_error(YAW_GIMBAL_MOTOR_TOE) &&
-          !toe_is_error(PITCH_GIMBAL_MOTOR_TOE) &&
-          !toe_is_error(TRIGGER_MOTOR_TOE))
-        {
-          CAN_cmd_gimbal(yaw_can_set_current, pitch_can_set_current, shoot_can_set_current, 0);
-        }
-        else
-        {
-          CAN_cmd_gimbal(0, 0, 0, 0);
-        }
+        CAN_cmd_gimbal(yaw_can_set_current, pitch_can_set_current, shoot_can_set_current, 0);
 
 #if GIMBAL_TEST_MODE
         J_scope_gimbal_test();

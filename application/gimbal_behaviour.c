@@ -511,16 +511,18 @@ static void gimbal_behavour_set(gimbal_control_t *gimbal_mode_set)
         }
     }
 
-    /* ===== ROS autonomous mode selection (no recognition dependency) ===== */
-    if (gimbal_mode_set->ros_nav_cmd != NULL &&
-             (gimbal_mode_set->ros_nav_cmd->nav_ctrl_flags & NAV_FLAG_GIMBAL_ABS_VALID))
+    /* ===== ROS autonomous mode selection =====
+     * The upper computer owns gimbal targets directly. As long as the
+     * navigation command structure exists, always use yaw_abs/pitch_abs as the
+     * active target source instead of requiring an extra validity gate bit.
+     */
+    if (gimbal_mode_set->ros_nav_cmd != NULL && ros_nav_cmd_received())
     {
-        gimbal_behaviour = GIMBAL_ROS_ABSOLUTE;
+      gimbal_behaviour = GIMBAL_ROS_ABSOLUTE;
     }
-    /* no command: hold current position */
     else
     {
-        gimbal_behaviour = GIMBAL_RELATIVE_ANGLE;
+      gimbal_behaviour = GIMBAL_RELATIVE_ANGLE;
     }
 
     // ROS-only control: never force INIT sweep automatically.
@@ -764,7 +766,7 @@ static void gimbal_ros_absolute_control(fp32 *yaw, fp32 *pitch, gimbal_control_t
     }
 
     const ros_nav_cmd_t *nav = gimbal_control_set->ros_nav_cmd;
-    if (nav == NULL || !(nav->nav_ctrl_flags & NAV_FLAG_GIMBAL_ABS_VALID))
+    if (nav == NULL)
     {
         *yaw = 0.0f;
         *pitch = 0.0f;
