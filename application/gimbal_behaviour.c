@@ -91,6 +91,15 @@
 #define gimbal_warn_buzzer_on() buzzer_on(31, 20000)
 #define gimbal_warn_buzzer_off() buzzer_off()
 
+/* ROS coordinate sign compensation.
+ * Set to -1.0f on the axis whose positive direction is opposite to the
+ * STM32 INS convention.  Change one axis at a time and verify with the
+ * dbg_* variables in gimbal_task.c before touching the other axis.
+ * Interface layer only — do NOT change YAW_TURN / PITCH_TURN at the same time.
+ */
+#define ROS_YAW_SIGN    1.0f
+#define ROS_PITCH_SIGN  1.0f
+
 
 /**
   * @brief          judge if gimbal reaches the limit by gyro
@@ -772,6 +781,8 @@ static void gimbal_ros_absolute_control(fp32 *yaw, fp32 *pitch, gimbal_control_t
      * can refresh target deterministically instead of relying on incremental
      * drift in ENCODE mode.
      */
-    *yaw   = rad_format(nav->yaw_abs   - gimbal_control_set->gimbal_yaw_motor.absolute_angle_set);
-    *pitch = rad_format(nav->pitch_abs - gimbal_control_set->gimbal_pitch_motor.absolute_angle_set);
+    const fp32 target_yaw   = rad_format(ROS_YAW_SIGN   * nav->yaw_abs);
+    const fp32 target_pitch = rad_format(ROS_PITCH_SIGN * nav->pitch_abs);
+    *yaw   = rad_format(target_yaw   - gimbal_control_set->gimbal_yaw_motor.absolute_angle_set);
+    *pitch = rad_format(target_pitch - gimbal_control_set->gimbal_pitch_motor.absolute_angle_set);
 }

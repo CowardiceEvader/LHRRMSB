@@ -286,6 +286,28 @@ gimbal_control_t gimbal_control;
 //motor current 
 //���͵ĵ������
 static int16_t yaw_can_set_current = 0, pitch_can_set_current = 0, shoot_can_set_current = 0;
+
+/* ---------- JScope / live-watch debug variables ----------
+ * Monitor these four groups to diagnose direction issues:
+ *   1. dbg_*_abs   — current INS absolute angle (rad)
+ *   2. dbg_*_set   — current absolute angle setpoint (rad)
+ *   3. dbg_*_err   — setpoint − feedback (should converge to 0)
+ *   4. dbg_*_current — final motor current sent to CAN (counts)
+ * Also check dbg_nav_flags and dbg_vision_online to confirm
+ * that the ROS link and gimbal-abs command are seen by firmware.
+ */
+volatile fp32    dbg_yaw_abs        = 0.0f;
+volatile fp32    dbg_yaw_set        = 0.0f;
+volatile fp32    dbg_yaw_err        = 0.0f;
+volatile fp32    dbg_yaw_gyro_set   = 0.0f;
+volatile int16_t dbg_yaw_current    = 0;
+volatile fp32    dbg_pitch_abs      = 0.0f;
+volatile fp32    dbg_pitch_set      = 0.0f;
+volatile fp32    dbg_pitch_err      = 0.0f;
+volatile fp32    dbg_pitch_gyro_set = 0.0f;
+volatile int16_t dbg_pitch_current  = 0;
+volatile uint8_t dbg_nav_flags      = 0;
+volatile uint8_t dbg_vision_online  = 0;
 //	           yaw_dual_can_set_current = 0, pitch_dual_can_set_current = 0, shoot_dual_can_set_current = 0;
 
 static bool_t gimbal_ros_command_active(const gimbal_control_t *control)
@@ -418,6 +440,20 @@ void gimbal_task(void const *pvParameters)
 #if GIMBAL_TEST_MODE
         J_scope_gimbal_test();
 #endif
+
+        /* Update live-watch debug variables every cycle */
+        dbg_yaw_abs        = gimbal_control.gimbal_yaw_motor.absolute_angle;
+        dbg_yaw_set        = gimbal_control.gimbal_yaw_motor.absolute_angle_set;
+        dbg_yaw_err        = rad_format(dbg_yaw_set - dbg_yaw_abs);
+        dbg_yaw_gyro_set   = gimbal_control.gimbal_yaw_motor.motor_gyro_set;
+        dbg_yaw_current    = gimbal_control.gimbal_yaw_motor.given_current;
+        dbg_pitch_abs      = gimbal_control.gimbal_pitch_motor.absolute_angle;
+        dbg_pitch_set      = gimbal_control.gimbal_pitch_motor.absolute_angle_set;
+        dbg_pitch_err      = rad_format(dbg_pitch_set - dbg_pitch_abs);
+        dbg_pitch_gyro_set = gimbal_control.gimbal_pitch_motor.motor_gyro_set;
+        dbg_pitch_current  = gimbal_control.gimbal_pitch_motor.given_current;
+        dbg_nav_flags      = gimbal_control.ros_nav_cmd ? gimbal_control.ros_nav_cmd->nav_ctrl_flags : 0u;
+        dbg_vision_online  = toe_is_error(VISION_TOE) ? 0u : 1u;
 
         vTaskDelay(GIMBAL_CONTROL_TIME);
 
