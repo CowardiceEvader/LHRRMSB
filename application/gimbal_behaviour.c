@@ -325,8 +325,8 @@ void gimbal_behaviour_mode_set(gimbal_control_t *gimbal_mode_set)
     }
     else if (gimbal_behaviour == GIMBAL_ROS_ABSOLUTE)
     {
-        gimbal_mode_set->gimbal_yaw_motor.gimbal_motor_mode = GIMBAL_MOTOR_ENCONDE;
-        gimbal_mode_set->gimbal_pitch_motor.gimbal_motor_mode = GIMBAL_MOTOR_ENCONDE;
+      gimbal_mode_set->gimbal_yaw_motor.gimbal_motor_mode = GIMBAL_MOTOR_GYRO;
+      gimbal_mode_set->gimbal_pitch_motor.gimbal_motor_mode = GIMBAL_MOTOR_GYRO;
     }
     else if (gimbal_behaviour == GIMBAL_MOTIONLESS)
     {
@@ -762,7 +762,16 @@ static void gimbal_ros_absolute_control(fp32 *yaw, fp32 *pitch, gimbal_control_t
         return;
     }
 
-    /* use absolute-angle feedback to match NAV absolute targets */
-    *yaw   = (nav->yaw_abs   - gimbal_control_set->gimbal_yaw_motor.absolute_angle)   * 0.01f;
-    *pitch = (nav->pitch_abs - gimbal_control_set->gimbal_pitch_motor.absolute_angle) * 0.01f;
+    /*
+     * ROS gives absolute yaw/pitch targets.
+     * In GIMBAL_MOTOR_GYRO mode, add_yaw/add_pitch are angle increments
+     * applied to absolute_angle_set every control cycle.
+     *
+     * Therefore we directly drive setpoint to target using the delta between
+     * target and current absolute setpoint (not feedback), so each new frame
+     * can refresh target deterministically instead of relying on incremental
+     * drift in ENCODE mode.
+     */
+    *yaw   = rad_format(nav->yaw_abs   - gimbal_control_set->gimbal_yaw_motor.absolute_angle_set);
+    *pitch = rad_format(nav->pitch_abs - gimbal_control_set->gimbal_pitch_motor.absolute_angle_set);
 }

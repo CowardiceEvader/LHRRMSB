@@ -1273,8 +1273,7 @@ static void gimbal_control_loop(gimbal_control_t *control_loop)
     }
     else if (control_loop->gimbal_yaw_motor.gimbal_motor_mode == GIMBAL_MOTOR_GYRO)
     {
-//        gimbal_motor_absolute_angle_control(&control_loop->gimbal_yaw_motor);
-		gimbal_motor_raw_angle_control(&control_loop->gimbal_yaw_motor);
+        gimbal_motor_absolute_angle_control(&control_loop->gimbal_yaw_motor);
     }
     else if (control_loop->gimbal_yaw_motor.gimbal_motor_mode == GIMBAL_MOTOR_ENCONDE)
     {
