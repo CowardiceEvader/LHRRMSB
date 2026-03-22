@@ -50,6 +50,10 @@ This guide defines how AI agents should modify the LHRRMSB Sentinel firmware saf
       - bit3: `NAV_FLAG_SHOOT`
     - Payload `[21..22]`: `seq` (`uint16`, little-endian)
     - Payload `[23..26]`: `timestamp_ms` (`uint32`, little-endian)
+  - `CMD_GIMBAL_CALI_REQ (0x12, LEN=1)`
+    - Payload `[0]`: `action`
+      - `0x01`: request gimbal-only calibration
+    - Firmware starts calibration only after startup delay, with yaw/pitch motor + IMU online, and without fresh `CMD_NAV_DATA`.
   - `CMD_HEARTBEAT (0x10, LEN=0)`: heartbeat only; refreshes `VISION_TOE` online status and does not update motion targets.
 - Current firmware does **not** parse `CMD_AIM_DATA (0x01)`; any instruction or integration that assumes legacy aim packets is outdated for this repository.
 - Link health for this protocol must be monitored separately in `detect_task` (`VISION_TOE`).
@@ -71,7 +75,7 @@ This guide defines how AI agents should modify the LHRRMSB Sentinel firmware saf
   - `[12..13]`: last parsed NAV sequence (`uint16`, little-endian)
   - `[14..17]`: last parsed NAV timestamp from upper computer (`uint32`, little-endian)
   - `[18..19]`: NAV command age in milliseconds on STM32 (`uint16`, little-endian)
-  - `[20]`: status flags (`uint8`) where bit0=`NAV_FRESH`, bit1=`VISION_ONLINE`, bit2=`REFEREE_ONLINE`, bit3=`HEAT_BLOCKED`, bit4=`GIMBAL_HOLD`
+  - `[20]`: status flags (`uint8`) where bit0=`NAV_FRESH`, bit1=`VISION_ONLINE`, bit2=`REFEREE_ONLINE`, bit3=`HEAT_BLOCKED`, bit4=`GIMBAL_HOLD`, bit5=`GIMBAL_CALI`, bit6=`GIMBAL_CALI_VALID`
 - Current implementation sends this frame approximately every `50 ms` from `vision_rx_task`.
 - The reported yaw/pitch values come from the active single-gimbal motor feedback (`get_yaw_motor_point()` / `get_pitch_motor_point()`), not from any dual-gimbal path.
 

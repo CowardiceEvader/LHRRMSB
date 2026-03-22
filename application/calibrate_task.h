@@ -162,6 +162,12 @@
 
 #define GYRO_CALIBRATE_TIME         20000   //gyro calibrate time,������У׼ʱ��
 
+// automatic gimbal calibration on boot: only used when gimbal flash data is invalid.
+// startup is still gated by motor/IMU online checks and extra stable time.
+#define AUTO_GIMBAL_CALI_ENABLE             1
+#define AUTO_GIMBAL_CALI_START_DELAY        0
+#define AUTO_GIMBAL_CALI_READY_STABLE_TIME  100
+
 //cali device name
 typedef enum
 {
@@ -255,6 +261,54 @@ extern int8_t get_control_temperature(void);
   * @retval         none
   */
 extern void get_flash_latitude(float *latitude);
+
+/**
+  * @brief          request gimbal-only calibration.
+  * @param[in]      none
+  * @retval         none
+  */
+/**
+  * @brief          请求启动仅云台校准。
+  * @param[in]      无
+  * @retval         无
+  */
+extern void request_gimbal_calibration(void);
+
+/**
+  * @brief          get current gimbal calibration validity.
+  * @param[in]      none
+  * @retval         1: valid 0: invalid
+  */
+/**
+  * @brief          获取当前云台校准是否有效。
+  * @param[in]      无
+  * @retval         1:有效 0:无效
+  */
+extern uint8_t gimbal_calibration_is_valid(void);
+
+/**
+  * @brief          get whether gimbal calibration is running.
+  * @param[in]      none
+  * @retval         1: running 0: idle
+  */
+/**
+  * @brief          获取当前云台校准是否正在运行。
+  * @param[in]      无
+  * @retval         1:运行中 0:空闲
+  */
+extern uint8_t gimbal_calibration_is_running(void);
+
+/**
+  * @brief          get whether gimbal calibration is pending.
+  * @param[in]      none
+  * @retval         1: pending 0: idle
+  */
+/**
+  * @brief          获取当前云台校准是否处于等待状态。
+  * @param[in]      无
+  * @retval         1:等待中 0:空闲
+  */
+extern uint8_t gimbal_calibration_is_pending(void);
 
 /**
   * @brief          calibrate task, created by main function

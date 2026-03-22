@@ -23,6 +23,7 @@
 #include "detect_task.h"
 #include "referee.h"
 #include "gimbal_task.h"
+#include "calibrate_task.h"
 #include "shoot.h"
 
 /* ---------- extern hardware handles ---------- */
@@ -161,6 +162,14 @@ static void ros_send_status_report(void)
     {
         status_flags |= ROS_STATUS_GIMBAL_HOLD;
     }
+    if (gimbal_calibration_is_running() || gimbal_calibration_is_pending())
+    {
+        status_flags |= ROS_STATUS_GIMBAL_CALI;
+    }
+    if (gimbal_calibration_is_valid())
+    {
+        status_flags |= ROS_STATUS_GIMBAL_CALI_VALID;
+    }
 
     tx[0] = ROS_SOF_H;
     tx[1] = ROS_SOF_L;
@@ -215,6 +224,15 @@ static void ros_handle_frame(uint8_t cmd, const uint8_t *payload, uint8_t len)
     {
         detect_hook(VISION_TOE);
         diag.frame_ok_count++;
+    }
+    else if (cmd == CMD_GIMBAL_CALI_REQ && len == 1)
+    {
+        if (payload[0] == GIMBAL_CALI_REQ_START)
+        {
+            request_gimbal_calibration();
+            detect_hook(VISION_TOE);
+            diag.frame_ok_count++;
+        }
     }
     else if (cmd == CMD_NAV_DATA && (len == 21 || len == 27))
     {

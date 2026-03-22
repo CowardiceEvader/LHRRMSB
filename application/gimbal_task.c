@@ -244,6 +244,7 @@ static fp32 gimbal_PID_calc(gimbal_PID_t *pid, fp32 get, fp32 set, fp32 error_de
 
 static bool_t gimbal_ros_command_active(const gimbal_control_t *control);
 static void gimbal_apply_safe_defaults(gimbal_control_t *control);
+static bool_t gimbal_cali_result_valid(const fp32 max_yaw, const fp32 min_yaw, const fp32 max_pitch, const fp32 min_pitch);
 
 /**
   * @brief          gimbal calibration calculate
@@ -344,6 +345,19 @@ static void gimbal_apply_safe_defaults(gimbal_control_t *control)
     control->gimbal_yaw_motor.absolute_angle_set = control->gimbal_yaw_motor.absolute_angle;
     control->gimbal_pitch_motor.absolute_angle_set = control->gimbal_pitch_motor.absolute_angle;
 }
+
+  static bool_t gimbal_cali_result_valid(const fp32 max_yaw, const fp32 min_yaw, const fp32 max_pitch, const fp32 min_pitch)
+  {
+    const fp32 yaw_span = max_yaw - min_yaw;
+    const fp32 pitch_span = max_pitch - min_pitch;
+
+    if (yaw_span < 0.6f || pitch_span < 0.25f)
+    {
+      return 0;
+    }
+
+    return 1;
+  }
 
 /**
   * @brief          gimbal task, osDelay GIMBAL_CONTROL_TIME (1ms) 
@@ -520,6 +534,13 @@ bool_t cmd_cali_gimbal_hook(uint16_t *yaw_offset, uint16_t *pitch_offset, fp32 *
         (*min_yaw) += GIMBAL_CALI_REDUNDANT_ANGLE;
         (*max_pitch) -= GIMBAL_CALI_REDUNDANT_ANGLE;
         (*min_pitch) += GIMBAL_CALI_REDUNDANT_ANGLE;
+
+      if (!gimbal_cali_result_valid(*max_yaw, *min_yaw, *max_pitch, *min_pitch))
+      {
+        gimbal_control.gimbal_cali.step = GIMBAL_CALI_START_STEP;
+        return 0;
+      }
+
         gimbal_control.gimbal_yaw_motor.offset_ecd              = *yaw_offset;
         gimbal_control.gimbal_yaw_motor.max_relative_angle      = *max_yaw;
         gimbal_control.gimbal_yaw_motor.min_relative_angle      = *min_yaw;

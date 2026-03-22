@@ -82,6 +82,7 @@
 #include "gimbal_behaviour.h"
 #include "arm_math.h"
 #include "bsp_buzzer.h"
+#include "calibrate_task.h"
 #include "detect_task.h"
 
 #include "user_lib.h"
@@ -99,6 +100,12 @@
  */
 #define ROS_YAW_SIGN    1.0f
 #define ROS_PITCH_SIGN  1.0f
+
+/* ROS absolute target safety limiter (rad per 1ms control cycle).
+ * Prevents sudden large setpoint jumps from causing dangerous startup spins.
+ */
+#define ROS_YAW_STEP_LIMIT_RAD_PER_CYCLE    0.0025f
+#define ROS_PITCH_STEP_LIMIT_RAD_PER_CYCLE  0.0020f
 
 
 /**
@@ -123,7 +130,7 @@
   */
 #define gimbal_cali_gyro_judge(gyro, cmd_time, angle_set, angle, ecd_set, ecd, step) \
     {                                                                                \
-        if ((gyro) < GIMBAL_CALI_GYRO_LIMIT)                                         \
+    if (((gyro) < GIMBAL_CALI_GYRO_LIMIT) && ((gyro) > (-GIMBAL_CALI_GYRO_LIMIT))) \
         {                                                                            \
             (cmd_time)++;                                                            \
             if ((cmd_time) > GIMBAL_CALI_STEP_TIME)                                  \
@@ -476,6 +483,12 @@ static void gimbal_behavour_set(gimbal_control_t *gimbal_mode_set)
         return;
     }
 
+    if (!gimbal_calibration_is_valid())
+    {
+      gimbal_behaviour = GIMBAL_ZERO_FORCE;
+      return;
+    }
+
     //init mode, judge if gimbal is in middle place
     if (gimbal_behaviour == GIMBAL_INIT)
     {
@@ -512,17 +525,17 @@ static void gimbal_behavour_set(gimbal_control_t *gimbal_mode_set)
     }
 
     /* ===== ROS autonomous mode selection =====
-     * The upper computer owns gimbal targets directly. As long as the
-     * navigation command structure exists, always use yaw_abs/pitch_abs as the
-     * active target source instead of requiring an extra validity gate bit.
+     * Enter ROS absolute control only when NAV frames are fresh.
+     * If NAV is stale/missing, fallback to local absolute-angle hold to avoid
+     * startup snap or stale-target drift.
      */
-    if (gimbal_mode_set->ros_nav_cmd != NULL && ros_nav_cmd_received())
+    if (gimbal_mode_set->ros_nav_cmd != NULL && ros_nav_cmd_fresh())
     {
       gimbal_behaviour = GIMBAL_ROS_ABSOLUTE;
     }
     else
     {
-      gimbal_behaviour = GIMBAL_RELATIVE_ANGLE;
+      gimbal_behaviour = GIMBAL_ABSOLUTE_ANGLE;
     }
 
     // ROS-only control: never force INIT sweep automatically.
@@ -773,6 +786,20 @@ static void gimbal_ros_absolute_control(fp32 *yaw, fp32 *pitch, gimbal_control_t
         return;
     }
 
+    if (!ros_nav_cmd_fresh())
+    {
+      *yaw = 0.0f;
+      *pitch = 0.0f;
+      return;
+    }
+
+    if ((nav->nav_ctrl_flags & NAV_FLAG_GIMBAL_ABS_VALID) == 0U)
+    {
+      *yaw = 0.0f;
+      *pitch = 0.0f;
+      return;
+    }
+
     /*
      * ROS gives absolute yaw/pitch targets.
      * In GIMBAL_MOTOR_GYRO mode, add_yaw/add_pitch are angle increments
@@ -785,6 +812,14 @@ static void gimbal_ros_absolute_control(fp32 *yaw, fp32 *pitch, gimbal_control_t
      */
     const fp32 target_yaw   = rad_format(ROS_YAW_SIGN   * nav->yaw_abs);
     const fp32 target_pitch = rad_format(ROS_PITCH_SIGN * nav->pitch_abs);
-    *yaw   = rad_format(target_yaw   - gimbal_control_set->gimbal_yaw_motor.absolute_angle_set);
+
+    *yaw = rad_format(target_yaw - gimbal_control_set->gimbal_yaw_motor.absolute_angle_set);
     *pitch = rad_format(target_pitch - gimbal_control_set->gimbal_pitch_motor.absolute_angle_set);
+
+    *yaw = fp32_constrain(*yaw,
+                -ROS_YAW_STEP_LIMIT_RAD_PER_CYCLE,
+                ROS_YAW_STEP_LIMIT_RAD_PER_CYCLE);
+    *pitch = fp32_constrain(*pitch,
+                -ROS_PITCH_STEP_LIMIT_RAD_PER_CYCLE,
+                ROS_PITCH_STEP_LIMIT_RAD_PER_CYCLE);
 }

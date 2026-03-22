@@ -104,8 +104,10 @@
 #include "bsp_flash.h"
 
 #include "can_receive.h"
+#include "detect_task.h"
 #include "INS_task.h"
 #include "gimbal_task.h"
+#include "vision_rx_task.h"
 
 
 //include head,gimbal,gyro,accel,mag. gyro,accel and mag have the same data struct. total 5(CALI_LIST_LENGHT) devices, need data lenght + 5 * 4 bytes(name[3]+cali)
@@ -148,7 +150,32 @@ static void cali_data_read(void);
   * @param[in]      none
   * @retval         none
   */
-static void cali_data_write(void);
+static bool_t cali_data_write(void);
+
+/**
+  * @brief          verify calibration data already written in flash matches the
+  *                 expected buffer.
+  * @param[in]      none
+  * @retval         1: flash contents match expected calibration buffer
+  *                 0: flash contents do not match expected calibration buffer
+  */
+static bool_t cali_data_verify(void);
+
+/**
+  * @brief          validate gimbal calibration payload loaded from flash.
+  * @param[in]      cali: gimbal calibration data pointer
+  * @retval         1: valid
+  *                 0: invalid
+  */
+static bool_t gimbal_flash_cali_data_valid(const gimbal_cali_t *cali);
+
+/**
+  * @brief          automatically request gimbal calibration once after boot when
+  *                 no valid gimbal calibration data exists in flash.
+  * @param[in]      none
+  * @retval         none
+  */
+static void auto_start_gimbal_calibrate(void);
 
 
 /**
@@ -226,6 +253,11 @@ static imu_cali_t      mag_cali;        //mag cali data
 
 
 static uint8_t flash_write_buf[FLASH_WRITE_BUF_LENGHT];
+static uint8_t flash_read_verify_buf[FLASH_WRITE_BUF_LENGHT];
+
+static bool_t gimbal_auto_cali_pending = 0;
+static bool_t gimbal_host_cali_pending = 0;
+static bool_t cali_data_dirty = 0;
 
 cali_sensor_t cali_sensor[CALI_LIST_LENGHT]; 
 
@@ -262,7 +294,16 @@ void calibrate_task(void const *pvParameters)
     while (1)
     {
 
+    if (cali_data_dirty)
+    {
+      if (cali_data_write())
+      {
+        cali_data_dirty = 0;
+      }
+    }
+
         RC_cmd_to_calibrate();
+      auto_start_gimbal_calibrate();
 
         for (i = 0; i < CALI_LIST_LENGHT; i++)
         {
@@ -281,8 +322,12 @@ void calibrate_task(void const *pvParameters)
                         cali_sensor[i].cali_done = CALIED_FLAG;
 
                         cali_sensor[i].cali_cmd = 0;
-                        //write
-                        cali_data_write();
+                        cali_data_dirty = 1;
+                        //write immediately and keep retrying in task loop until verified
+                        if (cali_data_write())
+                        {
+                          cali_data_dirty = 0;
+                        }
                     }
                 }
             }
@@ -293,6 +338,28 @@ void calibrate_task(void const *pvParameters)
 #endif
     }
 }
+
+  void request_gimbal_calibration(void)
+  {
+    gimbal_host_cali_pending = 1;
+    cali_sensor[CALI_GIMBAL].cali_done = 0;
+    cali_sensor[CALI_GIMBAL].cali_cmd = 0;
+  }
+
+  uint8_t gimbal_calibration_is_valid(void)
+  {
+    return (cali_sensor[CALI_GIMBAL].cali_done == CALIED_FLAG) ? 1U : 0U;
+  }
+
+  uint8_t gimbal_calibration_is_running(void)
+  {
+    return (cali_sensor[CALI_GIMBAL].cali_cmd != 0U) ? 1U : 0U;
+  }
+
+  uint8_t gimbal_calibration_is_pending(void)
+  {
+    return ((gimbal_auto_cali_pending != 0U) || (gimbal_host_cali_pending != 0U)) ? 1U : 0U;
+  }
 
 /**
   * @brief          get imu control temperature, unit ��
@@ -367,6 +434,10 @@ void cali_param_init(void)
 {
     uint8_t i = 0;
 
+  gimbal_auto_cali_pending = 0;
+  gimbal_host_cali_pending = 0;
+  cali_data_dirty = 0;
+
     for (i = 0; i < CALI_LIST_LENGHT; i++)
     {
         cali_sensor[i].flash_len = cali_sensor_size[i];
@@ -419,14 +490,111 @@ static void cali_data_read(void)
         cali_sensor[i].name[1] = flash_read_buf[1];
         cali_sensor[i].name[2] = flash_read_buf[2];
         cali_sensor[i].cali_done = flash_read_buf[3];
+
+        if (i == CALI_GIMBAL && cali_sensor[i].cali_done == CALIED_FLAG)
+        {
+          if (!gimbal_flash_cali_data_valid((const gimbal_cali_t *)cali_sensor[i].flash_buf))
+          {
+            cali_sensor[i].cali_done = 0;
+          }
+        }
         
         offset += CALI_SENSOR_HEAD_LEGHT * 4;
 
         if (cali_sensor[i].cali_done != CALIED_FLAG && cali_sensor[i].cali_hook != NULL)
         {
-            cali_sensor[i].cali_cmd = 1;
+          if (i == CALI_GIMBAL)
+          {
+              cali_sensor[i].cali_cmd = 0;
+#if AUTO_GIMBAL_CALI_ENABLE
+              gimbal_auto_cali_pending = 1;
+#else
+              gimbal_auto_cali_pending = 0;
+#endif
+          }
+          else
+          {
+              cali_sensor[i].cali_cmd = 1;
+          }
         }
     }
+}
+
+static void auto_start_gimbal_calibrate(void)
+{
+  static uint32_t gimbal_ready_tick = 0;
+  const uint32_t now = xTaskGetTickCount();
+
+  if (!gimbal_auto_cali_pending && !gimbal_host_cali_pending)
+  {
+    return;
+  }
+
+  if (cali_sensor[CALI_GIMBAL].cali_done == CALIED_FLAG)
+  {
+    gimbal_auto_cali_pending = 0;
+    gimbal_host_cali_pending = 0;
+    gimbal_ready_tick = 0;
+    return;
+  }
+
+  if (cali_sensor[CALI_GIMBAL].cali_cmd)
+  {
+    return;
+  }
+
+  if (now < AUTO_GIMBAL_CALI_START_DELAY)
+  {
+    return;
+  }
+
+  if (ros_nav_cmd_fresh())
+  {
+    gimbal_ready_tick = 0;
+    return;
+  }
+
+  if (toe_is_error(YAW_GIMBAL_MOTOR_TOE) || toe_is_error(PITCH_GIMBAL_MOTOR_TOE) || toe_is_error(RM_IMU_TOE))
+  {
+    gimbal_ready_tick = 0;
+    return;
+  }
+
+  if (gimbal_ready_tick == 0)
+  {
+    gimbal_ready_tick = now;
+    return;
+  }
+
+  if ((now - gimbal_ready_tick) < AUTO_GIMBAL_CALI_READY_STABLE_TIME)
+  {
+    return;
+  }
+
+  cali_sensor[CALI_GIMBAL].cali_cmd = 1;
+  gimbal_auto_cali_pending = 0;
+  gimbal_host_cali_pending = 0;
+  gimbal_ready_tick = 0;
+}
+
+static bool_t gimbal_flash_cali_data_valid(const gimbal_cali_t *cali)
+{
+  if (cali == NULL)
+  {
+    return 0;
+  }
+
+  if ((cali->yaw_max_angle - cali->yaw_min_angle) < 0.6f)
+  {
+    return 0;
+  }
+
+  if ((cali->pitch_max_angle - cali->pitch_min_angle) < 0.25f)
+  {
+    return 0;
+  }
+
+  return 1;
 }
 
 
@@ -440,11 +608,26 @@ static void cali_data_read(void)
   * @param[in]      none
   * @retval         none
   */
-static void cali_data_write(void)
+static bool_t cali_data_verify(void)
+{
+  memset(flash_read_verify_buf, 0, sizeof(flash_read_verify_buf));
+  cali_flash_read(FLASH_USER_ADDR, (uint32_t *)flash_read_verify_buf, (FLASH_WRITE_BUF_LENGHT + 3) / 4);
+
+  if (memcmp(flash_write_buf, flash_read_verify_buf, FLASH_WRITE_BUF_LENGHT) == 0)
+  {
+    return 1;
+  }
+
+  return 0;
+}
+
+static bool_t cali_data_write(void)
 {
     uint8_t i = 0;
+  uint8_t write_retry = 0;
     uint16_t offset = 0;
 
+  memset(flash_write_buf, 0, sizeof(flash_write_buf));
 
     for (i = 0; i < CALI_LIST_LENGHT; i++)
     {
@@ -457,10 +640,21 @@ static void cali_data_write(void)
         offset += CALI_SENSOR_HEAD_LEGHT * 4;
     }
 
-    //erase the page
-    cali_flash_erase(FLASH_USER_ADDR,1);
-    //write data
-    cali_flash_write(FLASH_USER_ADDR, (uint32_t *)flash_write_buf, (FLASH_WRITE_BUF_LENGHT + 3) / 4);
+    for (write_retry = 0; write_retry < 3; write_retry++)
+    {
+      //erase the page
+      cali_flash_erase(FLASH_USER_ADDR,1);
+      //write data and verify by readback
+      if (cali_flash_write(FLASH_USER_ADDR, (uint32_t *)flash_write_buf, (FLASH_WRITE_BUF_LENGHT + 3) / 4) == 0)
+      {
+        if (cali_data_verify())
+        {
+          return 1;
+        }
+      }
+    }
+
+    return 0;
 }
 
 
@@ -595,6 +789,7 @@ static bool_t cali_gimbal_hook(uint32_t *cali, bool_t cmd)
                                  &local_cali_t->pitch_max_angle, &local_cali_t->pitch_min_angle))
         {
             cali_buzzer_off();
+          gimbal_host_cali_pending = 0;
             
             return 1;
         }

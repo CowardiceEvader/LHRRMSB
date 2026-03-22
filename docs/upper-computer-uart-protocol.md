@@ -21,6 +21,7 @@
 
 - 上位机 -> STM32：
   - `CMD_NAV_DATA = 0x02`
+  - `CMD_GIMBAL_CALI_REQ = 0x12`
   - `CMD_HEARTBEAT = 0x10`
 - STM32 -> 上位机：
   - `CMD_STATUS_REPORT = 0x81`
@@ -44,6 +45,8 @@
 - 是链路掉了，还是只是动作命令没刷新？
 - 当前是不是处于本地保持位姿状态？
 - 发不出去是热量限制，还是命令根本没到？
+- 当前是否正在等待 / 执行云台校准？
+- 当前云台是否已经存在可用校准数据？
 
 ---
 
@@ -227,6 +230,40 @@
 
 这正是为了避免“链路还在线，但车还在执行很久以前的残留命令”。
 
+## 3.3 `CMD_GIMBAL_CALI_REQ = 0x12`
+
+### 3.3.1 作用
+
+请求下位机执行**仅云台校准**。
+
+### 3.3.2 Payload 长度
+
+固定为 `1 byte`。
+
+### 3.3.3 Payload 布局
+
+| 偏移 | 类型 | 字段 | 说明 |
+| ---: | --- | --- | --- |
+| 0 | `uint8_t` | `action` | `0x01` 表示启动云台校准 |
+
+### 3.3.4 当前实现语义
+
+- 当 payload[0] = `0x01` 时，下位机会登记一条云台校准请求
+- 真正开始校准前仍要求：
+  - yaw / pitch 电机在线
+  - IMU 在线
+  - 启动延迟已过
+  - 当前没有新鲜 `CMD_NAV_DATA`
+- 校准期间云台行为切到 `GIMBAL_CALI`
+- 若当前云台标定无效但校准尚未开始，则保持 `ZERO_FORCE`
+
+### 3.3.5 推荐上位机流程
+
+1. 停止持续发送 `CMD_NAV_DATA`
+2. 发送一帧 `CMD_GIMBAL_CALI_REQ(action=0x01)`
+3. 观察状态回传中的 `ROS_STATUS_GIMBAL_CALI`
+4. 校准完成并写回 Flash 后，再恢复正常控制
+
 ---
 
 ## 4. 上行接口：STM32 -> 上位机
@@ -272,6 +309,8 @@ $$2 + 1 + 1 + 21 + 1 = 26 \text{ byte}$$
 | 2 | `ROS_STATUS_REFEREE_ONLINE` | `0x04` | `REFEREE_TOE` 在线 |
 | 3 | `ROS_STATUS_HEAT_BLOCKED` | `0x08` | 当前因热量限制不允许发射 |
 | 4 | `ROS_STATUS_GIMBAL_HOLD` | `0x10` | 当前未使用新鲜 NAV 目标，云台处于本地保持位姿状态 |
+| 5 | `ROS_STATUS_GIMBAL_CALI` | `0x20` | 当前云台校准等待中或执行中 |
+| 6 | `ROS_STATUS_GIMBAL_CALI_VALID` | `0x40` | 当前已存在通过固件有效性检查的云台校准数据 |
 
 ### 4.1.5 字段解释
 
@@ -312,6 +351,31 @@ STM32 视角下，距离最近一次收到 `CMD_NAV_DATA` 已经过了多久。
 
 - 是“上位机正在主动控云台”
 - 还是“下位机正在本地稳住当前位姿”
+
+#### `ROS_STATUS_GIMBAL_CALI_VALID`
+
+这是本次新增给上位机联调的关键状态位：
+
+- 当 Flash 中云台校准数据被读出
+- 且通过固件内部有效性检查时
+- 该 bit 会置位
+
+当前有效性检查至少包含：
+
+- `cali_done == 0x55`
+- `yaw_max_angle - yaw_min_angle >= 0.6 rad`
+- `pitch_max_angle - pitch_min_angle >= 0.25 rad`
+
+它的用途是帮助上位机直接区分下面两种外观看起来都可能“不动”的状态：
+
+1. **云台已经有有效校准数据，因此不再自动扫限位**
+2. **云台还没有有效校准数据，只是暂时还没进入校准动作**
+
+建议上位机联调时这样理解：
+
+- `GIMBAL_CALI=1, GIMBAL_CALI_VALID=0`：正在等待或执行校准
+- `GIMBAL_CALI=0, GIMBAL_CALI_VALID=1`：已有有效校准数据，当前可正常保持
+- `GIMBAL_CALI=0, GIMBAL_CALI_VALID=0`：当前没有有效校准数据，需继续排查在线条件或主动触发校准
 
 ---
 

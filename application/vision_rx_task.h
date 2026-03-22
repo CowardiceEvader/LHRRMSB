@@ -23,6 +23,7 @@
 
 /* --- ROS -> STM32 (downstream) --- */
 #define CMD_NAV_DATA            0x02U   /* 27 bytes payload */
+#define CMD_GIMBAL_CALI_REQ     0x12U   /*  1 byte payload */
 #define CMD_HEARTBEAT           0x10U   /*  0 bytes payload */
 
 /* --- STM32 -> ROS (upstream) --- */
@@ -56,6 +57,10 @@ typedef union
 #define ROS_STATUS_REFEREE_ONLINE 0x04U
 #define ROS_STATUS_HEAT_BLOCKED   0x08U
 #define ROS_STATUS_GIMBAL_HOLD    0x10U
+#define ROS_STATUS_GIMBAL_CALI    0x20U
+#define ROS_STATUS_GIMBAL_CALI_VALID 0x40U
+
+#define GIMBAL_CALI_REQ_START     0x01U
 
 typedef struct
 {
