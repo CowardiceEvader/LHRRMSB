@@ -194,6 +194,16 @@ bool_t toe_is_error(uint8_t toe)
     return (error_list[toe].error_exist == 1);
 }
 
+bool_t detect_has_real_update(uint8_t toe)
+{
+    if (toe >= ERROR_LIST_LENGHT)
+    {
+        return 0;
+    }
+
+    return (error_list[toe].data_updated != 0U);
+}
+
 /**
   * @brief          record the time
   * @param[in]      toe: table of equipment
@@ -208,6 +218,7 @@ void detect_hook(uint8_t toe)
 {
     error_list[toe].last_time = error_list[toe].new_time;
     error_list[toe].new_time = xTaskGetTickCount();
+    error_list[toe].data_updated = 1U;
     
     if (error_list[toe].is_lost)
     {
@@ -288,6 +299,7 @@ static void detect_init(uint32_t time)
         error_list[i].error_exist = 1;
         error_list[i].is_lost = 1;
         error_list[i].data_is_error = 1;
+        error_list[i].data_updated = 0;
         error_list[i].frequency = 0.0f;
         error_list[i].new_time = time;
         error_list[i].last_time = time;

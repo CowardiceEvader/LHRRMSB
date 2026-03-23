@@ -85,7 +85,7 @@
 
 - 固件允许的最大 payload：`32 byte`
 - `CMD_NAV_DATA` 当前 payload：`27 byte`
-- `CMD_STATUS_REPORT` 当前 payload：`21 byte`
+- `CMD_STATUS_REPORT` 当前 payload：`72 byte`
 
 ---
 
@@ -255,6 +255,10 @@
     - IMU 解算最近持续有输出
   - 启动延迟已过
   - 当前没有新鲜 `CMD_NAV_DATA`
+- 当前版本中，**主机主动触发**和**上电自动触发**使用不同的门控参数：
+  - 上电自动触发：默认 `20ms recent + 100ms stable window`
+  - 主机主动触发：默认 `100ms recent + 20ms stable window`
+  - 这样做是为了避免主机重标时因为瞬时抖动长期卡在 `pending`
 - 校准期间云台行为切到 `GIMBAL_CALI`
 - 实际的 pitch/yaw 扫位、限位判定、Flash 写回都仍由下位机本地完成
 - 若当前云台标定无效但校准尚未开始，则保持 `ZERO_FORCE`
@@ -265,6 +269,47 @@
 2. 发送一帧 `CMD_GIMBAL_CALI_REQ(action=0x01)`
 3. 观察状态回传中的 `ROS_STATUS_GIMBAL_CALI`
 4. 校准完成并写回 Flash 后，再恢复正常控制
+
+### 3.3.6 当前版本新增：云台标定调试变量已进入 UART 状态帧
+
+为了定位“为什么 `CMD_GIMBAL_CALI_REQ` 发到了，但下位机仍然不响、不动、也不进入 running”，当前固件已将一组 `dbg_gimbal_cali_*` 变量直接追加进 `CMD_STATUS_REPORT`。
+
+- 位置：`application/calibrate_task.h` / `application/calibrate_task.c`
+- 传输方式：通过 `CMD_STATUS_REPORT (0x81)` 回传
+- 调试意义：上位机无需 ST-Link / Keil Watch，也能直接看到 gate 卡点
+
+联调时建议重点观察：
+
+- `dbg_gimbal_cali_request_count`
+- `dbg_gimbal_cali_host_pending`
+- `dbg_gimbal_cali_gate_state`
+- `dbg_gimbal_cali_block_nav_fresh`
+- `dbg_gimbal_cali_yaw_recent`
+- `dbg_gimbal_cali_pitch_recent`
+- `dbg_gimbal_cali_imu_recent`
+- `dbg_gimbal_cali_ready_elapsed_ms`
+- `dbg_gimbal_cali_dependency_max_age_ms`
+- `dbg_gimbal_cali_stable_time_ms`
+
+其中 `dbg_gimbal_cali_gate_state` 的含义如下：
+
+| 值 | 含义 |
+| ---: | --- |
+| 0 | 当前无 pending 请求 |
+| 2 | 仍被 fresh `CMD_NAV_DATA` 挡住 |
+| 3 | yaw 反馈不够新鲜 |
+| 4 | pitch 反馈不够新鲜 |
+| 5 | IMU 反馈不够新鲜 |
+| 6 | 正在等 100ms ready 稳定窗口 |
+| 7 | 已真正进入 running 扫位 |
+| 8 | 当前已有有效标定数据 |
+
+特别是：
+
+- 如果 `dbg_gimbal_cali_dependency_max_age_ms=100` 且 `dbg_gimbal_cali_stable_time_ms=20`
+- 但仍长期 `running=0`
+
+  那说明当前已经不是“主机触发门限太严”的问题，而更像是真实的 yaw / pitch / IMU 反馈链路问题。
 
 ---
 
@@ -282,11 +327,11 @@ $$50 \text{ ms}$$
 
 ### 4.1.2 Payload 长度
 
-固定为 `21 byte`。
+固定为 `72 byte`。
 
 完整帧总长度为：
 
-$$2 + 1 + 1 + 21 + 1 = 26 \text{ byte}$$
+$$2 + 1 + 1 + 72 + 1 = 77 \text{ byte}$$
 
 ### 4.1.3 Payload 布局
 
@@ -301,6 +346,27 @@ $$2 + 1 + 1 + 21 + 1 = 26 \text{ byte}$$
 | 14 | `uint32_t` | `last_nav_timestamp_ms` | ms | 最近一次成功解析的 `NAV_DATA.timestamp_ms` |
 | 18 | `uint16_t` | `nav_age_ms` | ms | 距最近一次 `NAV_DATA` 的本地经过时间 |
 | 20 | `uint8_t` | `status_flags` | - | 调试状态位 |
+| 21 | `uint32_t` | `dbg_gimbal_cali_request_count` | - | 已登记的标定请求次数 |
+| 25 | `uint32_t` | `dbg_gimbal_cali_last_req_tick` | ms/tick | 最近一次登记请求的系统 tick |
+| 29 | `uint32_t` | `dbg_gimbal_cali_now_tick` | ms/tick | 当前打包该帧时的系统 tick |
+| 33 | `uint32_t` | `dbg_gimbal_cali_ready_tick` | ms/tick | ready 稳定窗起始 tick |
+| 37 | `uint32_t` | `dbg_gimbal_cali_ready_elapsed_ms` | ms | ready 稳定窗累计时长 |
+| 41 | `uint32_t` | `dbg_gimbal_cali_yaw_age_ms` | ms | yaw 反馈 age |
+| 45 | `uint32_t` | `dbg_gimbal_cali_pitch_age_ms` | ms | pitch 反馈 age |
+| 49 | `uint32_t` | `dbg_gimbal_cali_imu_age_ms` | ms | IMU 反馈 age |
+| 53 | `uint32_t` | `dbg_gimbal_cali_dependency_max_age_ms` | ms | 当前生效的 recent 门限 |
+| 57 | `uint32_t` | `dbg_gimbal_cali_stable_time_ms` | ms | 当前生效的稳定窗门限 |
+| 61 | `uint8_t` | `dbg_gimbal_cali_gate_state` | - | 当前 gate 卡点 |
+| 62 | `uint8_t` | `dbg_gimbal_cali_host_pending` | - | 主机触发 pending |
+| 63 | `uint8_t` | `dbg_gimbal_cali_auto_pending` | - | 自动触发 pending |
+| 64 | `uint8_t` | `dbg_gimbal_cali_pending` | - | 任一 pending 总标志 |
+| 65 | `uint8_t` | `dbg_gimbal_cali_running` | - | 当前是否 running |
+| 66 | `uint8_t` | `dbg_gimbal_cali_valid` | - | 当前标定是否有效 |
+| 67 | `uint8_t` | `dbg_gimbal_cali_cmd` | - | `cali_cmd` 当前值 |
+| 68 | `uint8_t` | `dbg_gimbal_cali_block_nav_fresh` | - | 当前是否被 fresh NAV 挡住 |
+| 69 | `uint8_t` | `dbg_gimbal_cali_yaw_recent` | - | yaw recent 判定 |
+| 70 | `uint8_t` | `dbg_gimbal_cali_pitch_recent` | - | pitch recent 判定 |
+| 71 | `uint8_t` | `dbg_gimbal_cali_imu_recent` | - | IMU recent 判定 |
 
 ### 4.1.4 `status_flags` 定义
 
@@ -380,6 +446,40 @@ STM32 视角下，距离最近一次收到 `CMD_NAV_DATA` 已经过了多久。
 - `GIMBAL_CALI=1, GIMBAL_CALI_RUNNING=1, GIMBAL_CALI_VALID=0`：已经真正进入扫位执行阶段
 - `GIMBAL_CALI=0, GIMBAL_CALI_VALID=1`：已有有效校准数据，当前可正常保持
 - `GIMBAL_CALI=0, GIMBAL_CALI_VALID=0`：当前没有有效校准数据，需继续排查在线条件或主动触发校准
+
+#### `dbg_gimbal_cali_*`
+
+这组字段就是之前只能在下位机本地 watch 里看到的调试量，现在已随 `0x81` 帧一起上送。
+
+其中最关键的仍是：
+
+- `dbg_gimbal_cali_gate_state`
+- `dbg_gimbal_cali_yaw_age_ms`
+- `dbg_gimbal_cali_pitch_age_ms`
+- `dbg_gimbal_cali_imu_age_ms`
+- `dbg_gimbal_cali_yaw_recent`
+- `dbg_gimbal_cali_pitch_recent`
+- `dbg_gimbal_cali_imu_recent`
+
+这样上位机即可直接区分：
+
+- 请求没到
+- 被 `NAV_DATA` 挡住
+- yaw/pitch/IMU 哪一路没真正 recent
+- 已经进入 running 但执行阶段出了问题
+
+#### 关于 detect 初始化的一处关键修正
+
+当前版本还修复了 `detect_task` 的启动期判定：
+
+- 旧逻辑里，`detect_init()` 会把 `new_time` 初始化为当前 tick
+- 这会导致设备在**尚未收到第一帧真实反馈**前，短时间内也可能被误判成“recent”
+- 新逻辑增加了“是否收到过真实更新”的标志，只有真实 `detect_hook()` 发生过，`dbg_gimbal_cali_*_recent` 才可能为 1
+
+因此现在：
+
+- 上电不启动上位机也不响，若 `gate_state` 停在 `3/4/5`，就更可信地说明是对应链路**真的还没 fresh**
+- 不再存在“刚上电靠初始化时间戳误过门”的假象
 
 ---
 

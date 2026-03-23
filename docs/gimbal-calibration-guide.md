@@ -67,9 +67,19 @@
 - 且当前没有新鲜 `CMD_NAV_DATA`（即上位机没在发控制命令）
 - 稳定等待约 100ms 后自动开始
 
+当前版本额外做了一个区分：
+
+- **上电自动标定**：仍使用更严格的门控（默认 `20ms recent + 100ms stable window`）
+- **上位机主动重标**：使用更宽松的门控（默认 `100ms recent + 20ms stable window`）
+
+这样做的原因是：
+
+- 自动标定发生在刚上电阶段，需要更保守
+- 主机主动重标通常发生在系统已经稳定运行之后，不应因为短暂抖动长期卡在 `pending`
+
 > **如果自动标定已经成功完成并写入 Flash，后续上电将跳过标定直接进入正常控制。**
 > **如果你发现上电后没有蜂鸣器响，不代表“标定执行权已经交给上位机”。** 当前架构仍然是**下位机本地执行标定扫位**。
-> 只有在以下条件同时满足时才会响并开始：Flash 中当前没有有效云台标定数据；yaw / pitch / IMU 最近持续有新鲜数据；当前没有新鲜 `CMD_NAV_DATA`。
+> 只有在以下条件同时满足时才会响并开始：Flash 中当前没有有效云台标定数据；yaw / pitch / IMU 最近持续有**真实更新后的**新鲜数据；当前没有新鲜 `CMD_NAV_DATA`。
 > 只要其中任一条件不满足，就会表现成“上电不叫”。
 
 ---
@@ -243,8 +253,8 @@ def send_gimbal_cali_req(ser: serial.Serial):
 
 
 def parse_status_report(data: bytes):
-    """解析 CMD_STATUS_REPORT (0x81) payload (21 bytes)"""
-    if len(data) < 21:
+    """解析 CMD_STATUS_REPORT (0x81) payload (72 bytes)"""
+    if len(data) < 72:
         return None
     hp = struct.unpack_from('<H', data, 0)[0]
     yaw_abs = struct.unpack_from('<f', data, 2)[0]
@@ -255,12 +265,16 @@ def parse_status_report(data: bytes):
     last_nav_ts = struct.unpack_from('<I', data, 14)[0]
     nav_age_ms = struct.unpack_from('<H', data, 18)[0]
     status_flags = data[20]
+    gate_state = data[61]
 
     return {
         'hp': hp,
         'yaw_abs_rad': yaw_abs,
         'pitch_abs_rad': pitch_abs,
         'robot_id': robot_id,
+        'last_nav_seq': last_nav_seq,
+        'last_nav_timestamp_ms': last_nav_ts,
+        'nav_age_ms': nav_age_ms,
         'nav_fresh':       bool(status_flags & 0x01),
         'vision_online':   bool(status_flags & 0x02),
         'referee_online':  bool(status_flags & 0x04),
@@ -269,6 +283,27 @@ def parse_status_report(data: bytes):
         'gimbal_cali':     bool(status_flags & 0x20),
         'gimbal_cali_valid': bool(status_flags & 0x40),
         'gimbal_cali_running': bool(status_flags & 0x80),
+        'dbg_gimbal_cali_request_count': struct.unpack_from('<I', data, 21)[0],
+        'dbg_gimbal_cali_last_req_tick': struct.unpack_from('<I', data, 25)[0],
+        'dbg_gimbal_cali_now_tick': struct.unpack_from('<I', data, 29)[0],
+        'dbg_gimbal_cali_ready_tick': struct.unpack_from('<I', data, 33)[0],
+        'dbg_gimbal_cali_ready_elapsed_ms': struct.unpack_from('<I', data, 37)[0],
+        'dbg_gimbal_cali_yaw_age_ms': struct.unpack_from('<I', data, 41)[0],
+        'dbg_gimbal_cali_pitch_age_ms': struct.unpack_from('<I', data, 45)[0],
+        'dbg_gimbal_cali_imu_age_ms': struct.unpack_from('<I', data, 49)[0],
+        'dbg_gimbal_cali_dependency_max_age_ms': struct.unpack_from('<I', data, 53)[0],
+        'dbg_gimbal_cali_stable_time_ms': struct.unpack_from('<I', data, 57)[0],
+        'dbg_gimbal_cali_gate_state': gate_state,
+        'dbg_gimbal_cali_host_pending': bool(data[62]),
+        'dbg_gimbal_cali_auto_pending': bool(data[63]),
+        'dbg_gimbal_cali_pending': bool(data[64]),
+        'dbg_gimbal_cali_running_raw': bool(data[65]),
+        'dbg_gimbal_cali_valid_raw': bool(data[66]),
+        'dbg_gimbal_cali_cmd': bool(data[67]),
+        'dbg_gimbal_cali_block_nav_fresh': bool(data[68]),
+        'dbg_gimbal_cali_yaw_recent': bool(data[69]),
+        'dbg_gimbal_cali_pitch_recent': bool(data[70]),
+        'dbg_gimbal_cali_imu_recent': bool(data[71]),
     }
 ```
 
@@ -584,6 +619,117 @@ ser.close()
 
 - `gimbal_cali=1` 且 `gimbal_cali_running=0`：说明只是 **pending**，还没真正扫位
 - `gimbal_cali=1` 且 `gimbal_cali_running=1`：说明已经真正开始标定
+
+如果你已经确认：
+
+- `CMD_GIMBAL_CALI_REQ(action=0x01)` 已发出
+- 协议本身不想再改
+- 但下位机仍表现为 **不响 / 不动 / 不进入 running**
+
+那么当前版本已经额外提供了一组**下位机本地 watch 调试变量**，专门用来定位到底卡在哪个启动门控条件。
+
+### 6.2.1 当前版本：调试变量已随 `CMD_STATUS_REPORT` 回传
+
+这些变量定义在：
+
+- `application/calibrate_task.h`
+- `application/calibrate_task.c`
+
+用途：
+
+- 仍可供 **Keil Watch / Live Watch / JScope** 观察
+- 现在也会通过 `CMD_STATUS_REPORT (0x81)` 一并回传
+- 上位机可以直接解析，无需 ST-Link 才能看到 gate 卡点
+
+推荐最先盯这几项：
+
+| 变量名 | 含义 | 典型用途 |
+| --- | --- | --- |
+| `dbg_gimbal_cali_request_count` | 已登记的标定请求次数 | 判断 `CMD_GIMBAL_CALI_REQ` 是否真的落到下位机 |
+| `dbg_gimbal_cali_last_req_tick` | 最近一次登记请求的系统 tick | 判断“刚才那一帧请求”有没有被接住 |
+| `dbg_gimbal_cali_host_pending` | 主机触发 pending 标志 | 判断主机请求是否已挂起 |
+| `dbg_gimbal_cali_auto_pending` | 自动标定 pending 标志 | 区分是主机触发还是上电自动触发 |
+| `dbg_gimbal_cali_pending` | 总 pending 标志 | 判断是否还停在等待态 |
+| `dbg_gimbal_cali_running` | 当前是否已进入 running | 判断是否真正开始扫位 |
+| `dbg_gimbal_cali_valid` | 当前 Flash 标定是否有效 | 判断是不是因为已有有效数据而不再启动 |
+| `dbg_gimbal_cali_gate_state` | 当前卡住的门控阶段枚举 | **最关键**，直接看卡在哪个门 |
+| `dbg_gimbal_cali_block_nav_fresh` | 当前是否仍被 fresh NAV 挡住 | 排查“上位机其实还在发 NAV” |
+| `dbg_gimbal_cali_yaw_recent` | yaw 反馈最近是否足够新鲜 | 排查 yaw 反馈刷新 |
+| `dbg_gimbal_cali_pitch_recent` | pitch 反馈最近是否足够新鲜 | 排查 pitch 反馈刷新 |
+| `dbg_gimbal_cali_imu_recent` | IMU 反馈最近是否足够新鲜 | 排查 IMU 解算刷新 |
+| `dbg_gimbal_cali_yaw_age_ms` | yaw 最近反馈 age | 看离 20ms 门限差多少 |
+| `dbg_gimbal_cali_pitch_age_ms` | pitch 最近反馈 age | 看离 20ms 门限差多少 |
+| `dbg_gimbal_cali_imu_age_ms` | IMU 最近反馈 age | 看离 20ms 门限差多少 |
+| `dbg_gimbal_cali_ready_elapsed_ms` | ready 稳定窗口已累计多久 | 判断是否卡在 100ms 稳定窗 |
+| `dbg_gimbal_cali_dependency_max_age_ms` | 当前生效的 recent 门限 | 判断此刻按自动门限还是主机门限在判 |
+| `dbg_gimbal_cali_stable_time_ms` | 当前生效的稳定窗门限 | 判断此刻需要累计多久 |
+
+### 6.2.2 `dbg_gimbal_cali_gate_state` 对照表
+
+| 值 | 宏名 | 含义 | 优先排查 |
+| ---: | --- | --- | --- |
+| 0 | `DBG_GIMBAL_CALI_GATE_IDLE` | 当前没有 pending 请求 | 先确认请求是否真正落地 |
+| 1 | `DBG_GIMBAL_CALI_GATE_WAIT_START_DELAY` | 在等启动延迟 | 当前默认一般不会卡这里 |
+| 2 | `DBG_GIMBAL_CALI_GATE_WAIT_NAV_CLEAR` | 还存在 fresh `CMD_NAV_DATA` | 上位机先停发 NAV |
+| 3 | `DBG_GIMBAL_CALI_GATE_WAIT_YAW_FEEDBACK` | yaw 反馈不够新鲜 | 查 yaw CAN 反馈、ID、接线 |
+| 4 | `DBG_GIMBAL_CALI_GATE_WAIT_PITCH_FEEDBACK` | pitch 反馈不够新鲜 | 查 pitch CAN 反馈、ID、接线 |
+| 5 | `DBG_GIMBAL_CALI_GATE_WAIT_IMU_FEEDBACK` | IMU 解算输出不够新鲜 | 查 INS / BMI088 / `RM_IMU_TOE` |
+| 6 | `DBG_GIMBAL_CALI_GATE_WAIT_STABLE_WINDOW` | 依赖都满足，但还在等稳定窗 | 看 `dbg_gimbal_cali_ready_elapsed_ms` 是否能涨到 100 |
+| 7 | `DBG_GIMBAL_CALI_GATE_RUNNING` | 已经真正进入扫位 | 这时再去查后段执行逻辑 |
+| 8 | `DBG_GIMBAL_CALI_GATE_VALID_READY` | 当前已有有效标定数据 | 不是“卡住”，而是已经有效 |
+
+### 6.2.3 最快定位方法
+
+如果现场现象是：
+
+- 上位机发了标定命令
+- 下位机不响、不动
+
+那么优先看下面这个组合：
+
+1. `dbg_gimbal_cali_request_count` 是否增加
+2. `dbg_gimbal_cali_host_pending` 是否变成 `1`
+3. `dbg_gimbal_cali_gate_state` 最终停在哪个值
+
+可以直接这样理解：
+
+- `request_count` 不变：请求根本没被下位机解析到
+- `request_count` 增加、`host_pending=1`、`gate_state=2`：被 fresh NAV 挡住
+- `gate_state=3/4/5`：被 yaw / pitch / IMU 新鲜度挡住
+- `gate_state=6`：前置条件都过了，但稳定窗持续被打断
+- `gate_state=7`：已经开始扫位，不再是启动门控问题
+
+### 6.2.4 这次修掉的 detect 初始化问题，到底是什么
+
+这次还一起修了一个很容易把人绕晕的启动期问题：
+
+- 旧逻辑中，`detect_init()` 会把每个设备的 `new_time` 先初始化成当前 tick
+- 如果只看 `now - new_time <= max_age`，那么设备在**还没有收到第一帧真实反馈**时，也可能在刚启动的一小段时间里被误判成“recent”
+- 这就会造成一种错觉：第一次上电很早发请求，偶尔像是能开始；再发一次却又稳定卡 `pending`
+
+当前版本的修正是：
+
+- `detect_task` 增加 `data_updated` 标志
+- 只有真实 `detect_hook()` 发生过，相关依赖才会被算作 recent
+
+所以现在如果：
+
+- 上电后不开上位机也不响
+- `dbg_gimbal_cali_gate_state=3/4/5`
+
+那就更可信地说明：
+
+- yaw / pitch / IMU 里确实有某一路还没有收到真实新鲜反馈
+
+而不是被 `detect_init()` 的初始时间戳“演了一出假 recent”。
+
+如果你看到：
+
+- `host_pending=1`
+- `dbg_gimbal_cali_dependency_max_age_ms=100`
+- `dbg_gimbal_cali_stable_time_ms=20`
+
+说明当前已经在使用**主机触发的宽松门控**。如果此时仍然长期卡在 `3/4/5`，那就更像是真实链路问题，而不是门限过严导致的误杀。
 
 ### 6.3 标定完成但 yaw / pitch 方向相反
 

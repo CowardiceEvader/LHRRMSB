@@ -87,6 +87,7 @@ typedef __packed struct
     uint32_t last_time;
     uint32_t lost_time;
     uint32_t work_time;
+  uint8_t data_updated;
     uint16_t set_offline_time : 12;
     uint16_t set_online_time : 12;
     uint8_t enable : 1;
@@ -137,6 +138,18 @@ extern bool_t toe_is_error(uint8_t err);
   * @retval         none
   */
 extern void detect_hook(uint8_t toe);
+
+/**
+  * @brief          get whether the device has received at least one real update
+  * @param[in]      toe: table of equipment
+  * @retval         true(updated) false(no real update yet)
+  */
+/**
+  * @brief          获取设备是否收到过至少一次真实更新
+  * @param[in]      toe:设备目录
+  * @retval         true(已更新) false(尚无真实更新)
+  */
+extern bool_t detect_has_real_update(uint8_t toe);
 
 /**
   * @brief          get error list

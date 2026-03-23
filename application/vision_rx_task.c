@@ -121,12 +121,12 @@ static void uart1_dma_send(const uint8_t *buf, uint16_t len)
 }
 
 /* ================================================================
- *  ros_send_status_report — CMD_STATUS_REPORT (0x81), 14 bytes payload
+ *  ros_send_status_report — CMD_STATUS_REPORT (0x81), 72 bytes payload
  * ================================================================ */
 static void ros_send_status_report(void)
 {
-    /* frame: SOF_H SOF_L CMD LEN [21 payload] CRC = 26 bytes */
-    static uint8_t tx[26];
+    /* frame: SOF_H SOF_L CMD LEN [72 payload] CRC = 77 bytes */
+    static uint8_t tx[ROS_STATUS_REPORT_PAYLOAD_LEN + ROS_FRAME_OVERHEAD];
 
     const gimbal_motor_t *yaw_motor   = get_yaw_motor_point();
     const gimbal_motor_t *pitch_motor = get_pitch_motor_point();
@@ -139,6 +139,27 @@ static void ros_send_status_report(void)
     uint16_t heat_limit = 0U;
     uint16_t heat = 0U;
     uint8_t status_flags = 0U;
+    uint32_t dbg_request_count;
+    uint32_t dbg_last_req_tick;
+    uint32_t dbg_now_tick;
+    uint32_t dbg_ready_tick;
+    uint32_t dbg_ready_elapsed_ms;
+    uint32_t dbg_yaw_age_ms;
+    uint32_t dbg_pitch_age_ms;
+    uint32_t dbg_imu_age_ms;
+    uint32_t dbg_dependency_max_age_ms;
+    uint32_t dbg_stable_time_ms;
+    uint8_t dbg_gate_state;
+    uint8_t dbg_host_pending;
+    uint8_t dbg_auto_pending;
+    uint8_t dbg_pending;
+    uint8_t dbg_running;
+    uint8_t dbg_valid;
+    uint8_t dbg_cmd;
+    uint8_t dbg_block_nav_fresh;
+    uint8_t dbg_yaw_recent;
+    uint8_t dbg_pitch_recent;
+    uint8_t dbg_imu_recent;
 
     get_shoot_heat0_limit_and_heat0(&heat_limit, &heat);
 
@@ -175,12 +196,34 @@ static void ros_send_status_report(void)
         status_flags |= ROS_STATUS_GIMBAL_CALI_VALID;
     }
 
+    dbg_request_count = dbg_gimbal_cali_request_count;
+    dbg_last_req_tick = dbg_gimbal_cali_last_req_tick;
+    dbg_now_tick = dbg_gimbal_cali_now_tick;
+    dbg_ready_tick = dbg_gimbal_cali_ready_tick;
+    dbg_ready_elapsed_ms = dbg_gimbal_cali_ready_elapsed_ms;
+    dbg_yaw_age_ms = dbg_gimbal_cali_yaw_age_ms;
+    dbg_pitch_age_ms = dbg_gimbal_cali_pitch_age_ms;
+    dbg_imu_age_ms = dbg_gimbal_cali_imu_age_ms;
+    dbg_dependency_max_age_ms = dbg_gimbal_cali_dependency_max_age_ms;
+    dbg_stable_time_ms = dbg_gimbal_cali_stable_time_ms;
+    dbg_gate_state = dbg_gimbal_cali_gate_state;
+    dbg_host_pending = dbg_gimbal_cali_host_pending;
+    dbg_auto_pending = dbg_gimbal_cali_auto_pending;
+    dbg_pending = dbg_gimbal_cali_pending;
+    dbg_running = dbg_gimbal_cali_running;
+    dbg_valid = dbg_gimbal_cali_valid;
+    dbg_cmd = dbg_gimbal_cali_cmd;
+    dbg_block_nav_fresh = dbg_gimbal_cali_block_nav_fresh;
+    dbg_yaw_recent = dbg_gimbal_cali_yaw_recent;
+    dbg_pitch_recent = dbg_gimbal_cali_pitch_recent;
+    dbg_imu_recent = dbg_gimbal_cali_imu_recent;
+
     tx[0] = ROS_SOF_H;
     tx[1] = ROS_SOF_L;
     tx[2] = CMD_STATUS_REPORT;
-    tx[3] = 21;
+    tx[3] = ROS_STATUS_REPORT_PAYLOAD_LEN;
 
-    /* payload at [4..24] */
+    /* payload at [4..75] */
     tx[4] = (uint8_t)(hp & 0xFF);
     tx[5] = (uint8_t)(hp >> 8);
     memcpy(&tx[6],  &yaw_abs,   4);
@@ -196,11 +239,32 @@ static void ros_send_status_report(void)
         tx[23] = (uint8_t)(nav_age_ms >> 8);
     }
     tx[24] = status_flags;
+    memcpy(&tx[25], &dbg_request_count, 4);
+    memcpy(&tx[29], &dbg_last_req_tick, 4);
+    memcpy(&tx[33], &dbg_now_tick, 4);
+    memcpy(&tx[37], &dbg_ready_tick, 4);
+    memcpy(&tx[41], &dbg_ready_elapsed_ms, 4);
+    memcpy(&tx[45], &dbg_yaw_age_ms, 4);
+    memcpy(&tx[49], &dbg_pitch_age_ms, 4);
+    memcpy(&tx[53], &dbg_imu_age_ms, 4);
+    memcpy(&tx[57], &dbg_dependency_max_age_ms, 4);
+    memcpy(&tx[61], &dbg_stable_time_ms, 4);
+    tx[65] = dbg_gate_state;
+    tx[66] = dbg_host_pending;
+    tx[67] = dbg_auto_pending;
+    tx[68] = dbg_pending;
+    tx[69] = dbg_running;
+    tx[70] = dbg_valid;
+    tx[71] = dbg_cmd;
+    tx[72] = dbg_block_nav_fresh;
+    tx[73] = dbg_yaw_recent;
+    tx[74] = dbg_pitch_recent;
+    tx[75] = dbg_imu_recent;
 
-    /* CRC8 over CMD + LEN + PAYLOAD = tx[2..24] */
-    tx[25] = ros_crc8(&tx[2], 23);
+    /* CRC8 over CMD + LEN + PAYLOAD = tx[2..75] */
+    tx[76] = ros_crc8(&tx[2], ROS_STATUS_REPORT_PAYLOAD_LEN + 2U);
 
-    uart1_dma_send(tx, 26);
+    uart1_dma_send(tx, sizeof(tx));
 }
 
 /* ================================================================

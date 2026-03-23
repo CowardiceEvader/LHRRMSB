@@ -169,6 +169,25 @@
 #define AUTO_GIMBAL_CALI_READY_STABLE_TIME  100
 #define AUTO_GIMBAL_CALI_DEPENDENCY_MAX_AGE 20
 
+// host-triggered re-calibration uses a looser gate than boot auto-start.
+// reason: host requests are usually sent after the system is already stable,
+// and a slightly wider recent window avoids getting stuck in pending due to
+// brief feedback jitter or detect_task scheduling skew.
+#define HOST_GIMBAL_CALI_READY_STABLE_TIME  20
+#define HOST_GIMBAL_CALI_DEPENDENCY_MAX_AGE 100
+
+// local watch/JScope gate-state values for gimbal calibration startup.
+// these values are also mirrored into the UART status report for host-side debugging.
+#define DBG_GIMBAL_CALI_GATE_IDLE                 0U
+#define DBG_GIMBAL_CALI_GATE_WAIT_START_DELAY     1U
+#define DBG_GIMBAL_CALI_GATE_WAIT_NAV_CLEAR       2U
+#define DBG_GIMBAL_CALI_GATE_WAIT_YAW_FEEDBACK    3U
+#define DBG_GIMBAL_CALI_GATE_WAIT_PITCH_FEEDBACK  4U
+#define DBG_GIMBAL_CALI_GATE_WAIT_IMU_FEEDBACK    5U
+#define DBG_GIMBAL_CALI_GATE_WAIT_STABLE_WINDOW   6U
+#define DBG_GIMBAL_CALI_GATE_RUNNING              7U
+#define DBG_GIMBAL_CALI_GATE_VALID_READY          8U
+
 //cali device name
 typedef enum
 {
@@ -310,6 +329,30 @@ extern uint8_t gimbal_calibration_is_running(void);
   * @retval         1:等待中 0:空闲
   */
 extern uint8_t gimbal_calibration_is_pending(void);
+
+// local calibration gate debug variables.
+// they can be observed in debugger/live watch and are mirrored into CMD_STATUS_REPORT.
+extern volatile uint32_t dbg_gimbal_cali_request_count;
+extern volatile uint32_t dbg_gimbal_cali_last_req_tick;
+extern volatile uint32_t dbg_gimbal_cali_now_tick;
+extern volatile uint32_t dbg_gimbal_cali_ready_tick;
+extern volatile uint32_t dbg_gimbal_cali_ready_elapsed_ms;
+extern volatile uint32_t dbg_gimbal_cali_yaw_age_ms;
+extern volatile uint32_t dbg_gimbal_cali_pitch_age_ms;
+extern volatile uint32_t dbg_gimbal_cali_imu_age_ms;
+extern volatile uint32_t dbg_gimbal_cali_dependency_max_age_ms;
+extern volatile uint32_t dbg_gimbal_cali_stable_time_ms;
+extern volatile uint8_t dbg_gimbal_cali_gate_state;
+extern volatile uint8_t dbg_gimbal_cali_host_pending;
+extern volatile uint8_t dbg_gimbal_cali_auto_pending;
+extern volatile uint8_t dbg_gimbal_cali_pending;
+extern volatile uint8_t dbg_gimbal_cali_running;
+extern volatile uint8_t dbg_gimbal_cali_valid;
+extern volatile uint8_t dbg_gimbal_cali_cmd;
+extern volatile uint8_t dbg_gimbal_cali_block_nav_fresh;
+extern volatile uint8_t dbg_gimbal_cali_yaw_recent;
+extern volatile uint8_t dbg_gimbal_cali_pitch_recent;
+extern volatile uint8_t dbg_gimbal_cali_imu_recent;
 
 /**
   * @brief          calibrate task, created by main function

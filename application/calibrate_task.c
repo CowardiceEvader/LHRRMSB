@@ -179,6 +179,9 @@ static bool_t gimbal_flash_cali_data_valid(const gimbal_cali_t *cali);
   */
 static bool_t cali_dependency_recent(uint8_t toe, uint32_t now, uint32_t max_age);
 
+static uint32_t cali_dependency_age_ms(uint8_t toe, uint32_t now);
+static void update_gimbal_cali_debug_snapshot(uint32_t now, uint32_t ready_tick, uint32_t active_max_age, uint32_t active_stable_time);
+
 /**
   * @brief          automatically request gimbal calibration once after boot when
   *                 no valid gimbal calibration data exists in flash.
@@ -269,6 +272,28 @@ static bool_t gimbal_auto_cali_pending = 0;
 static bool_t gimbal_host_cali_pending = 0;
 static bool_t cali_data_dirty = 0;
 
+volatile uint32_t dbg_gimbal_cali_request_count = 0;
+volatile uint32_t dbg_gimbal_cali_last_req_tick = 0;
+volatile uint32_t dbg_gimbal_cali_now_tick = 0;
+volatile uint32_t dbg_gimbal_cali_ready_tick = 0;
+volatile uint32_t dbg_gimbal_cali_ready_elapsed_ms = 0;
+volatile uint32_t dbg_gimbal_cali_yaw_age_ms = 0xFFFFFFFFU;
+volatile uint32_t dbg_gimbal_cali_pitch_age_ms = 0xFFFFFFFFU;
+volatile uint32_t dbg_gimbal_cali_imu_age_ms = 0xFFFFFFFFU;
+volatile uint32_t dbg_gimbal_cali_dependency_max_age_ms = AUTO_GIMBAL_CALI_DEPENDENCY_MAX_AGE;
+volatile uint32_t dbg_gimbal_cali_stable_time_ms = AUTO_GIMBAL_CALI_READY_STABLE_TIME;
+volatile uint8_t dbg_gimbal_cali_gate_state = DBG_GIMBAL_CALI_GATE_IDLE;
+volatile uint8_t dbg_gimbal_cali_host_pending = 0;
+volatile uint8_t dbg_gimbal_cali_auto_pending = 0;
+volatile uint8_t dbg_gimbal_cali_pending = 0;
+volatile uint8_t dbg_gimbal_cali_running = 0;
+volatile uint8_t dbg_gimbal_cali_valid = 0;
+volatile uint8_t dbg_gimbal_cali_cmd = 0;
+volatile uint8_t dbg_gimbal_cali_block_nav_fresh = 0;
+volatile uint8_t dbg_gimbal_cali_yaw_recent = 0;
+volatile uint8_t dbg_gimbal_cali_pitch_recent = 0;
+volatile uint8_t dbg_gimbal_cali_imu_recent = 0;
+
 cali_sensor_t cali_sensor[CALI_LIST_LENGHT]; 
 
 static const uint8_t cali_name[CALI_LIST_LENGHT][3] = {"HD", "GM", "GYR", "ACC", "MAG"};
@@ -351,9 +376,12 @@ void calibrate_task(void const *pvParameters)
 
   void request_gimbal_calibration(void)
   {
+    dbg_gimbal_cali_request_count++;
+    dbg_gimbal_cali_last_req_tick = xTaskGetTickCount();
     gimbal_host_cali_pending = 1;
     cali_sensor[CALI_GIMBAL].cali_done = 0;
     cali_sensor[CALI_GIMBAL].cali_cmd = 0;
+    dbg_gimbal_cali_gate_state = DBG_GIMBAL_CALI_GATE_WAIT_NAV_CLEAR;
   }
 
   uint8_t gimbal_calibration_is_valid(void)
@@ -534,9 +562,15 @@ static void auto_start_gimbal_calibrate(void)
 {
   static uint32_t gimbal_ready_tick = 0;
   const uint32_t now = xTaskGetTickCount();
+  const uint32_t active_max_age = gimbal_host_cali_pending ? HOST_GIMBAL_CALI_DEPENDENCY_MAX_AGE : AUTO_GIMBAL_CALI_DEPENDENCY_MAX_AGE;
+  const uint32_t active_stable_time = gimbal_host_cali_pending ? HOST_GIMBAL_CALI_READY_STABLE_TIME : AUTO_GIMBAL_CALI_READY_STABLE_TIME;
+
+  update_gimbal_cali_debug_snapshot(now, gimbal_ready_tick, active_max_age, active_stable_time);
 
   if (!gimbal_auto_cali_pending && !gimbal_host_cali_pending)
   {
+    dbg_gimbal_cali_gate_state = gimbal_calibration_is_valid() ? DBG_GIMBAL_CALI_GATE_VALID_READY : DBG_GIMBAL_CALI_GATE_IDLE;
+    update_gimbal_cali_debug_snapshot(now, gimbal_ready_tick, active_max_age, active_stable_time);
     return;
   }
 
@@ -545,17 +579,23 @@ static void auto_start_gimbal_calibrate(void)
     gimbal_auto_cali_pending = 0;
     gimbal_host_cali_pending = 0;
     gimbal_ready_tick = 0;
+    dbg_gimbal_cali_gate_state = DBG_GIMBAL_CALI_GATE_VALID_READY;
+    update_gimbal_cali_debug_snapshot(now, gimbal_ready_tick, active_max_age, active_stable_time);
     return;
   }
 
   if (cali_sensor[CALI_GIMBAL].cali_cmd)
   {
+    dbg_gimbal_cali_gate_state = DBG_GIMBAL_CALI_GATE_RUNNING;
+    update_gimbal_cali_debug_snapshot(now, gimbal_ready_tick, active_max_age, active_stable_time);
     return;
   }
 
 #if AUTO_GIMBAL_CALI_START_DELAY > 0
   if (now < AUTO_GIMBAL_CALI_START_DELAY)
   {
+    dbg_gimbal_cali_gate_state = DBG_GIMBAL_CALI_GATE_WAIT_START_DELAY;
+    update_gimbal_cali_debug_snapshot(now, gimbal_ready_tick, active_max_age, active_stable_time);
     return;
   }
 #endif
@@ -563,25 +603,47 @@ static void auto_start_gimbal_calibrate(void)
   if (ros_nav_cmd_fresh())
   {
     gimbal_ready_tick = 0;
+    dbg_gimbal_cali_gate_state = DBG_GIMBAL_CALI_GATE_WAIT_NAV_CLEAR;
+    update_gimbal_cali_debug_snapshot(now, gimbal_ready_tick, active_max_age, active_stable_time);
     return;
   }
 
-  if (!cali_dependency_recent(YAW_GIMBAL_MOTOR_TOE, now, AUTO_GIMBAL_CALI_DEPENDENCY_MAX_AGE) ||
-      !cali_dependency_recent(PITCH_GIMBAL_MOTOR_TOE, now, AUTO_GIMBAL_CALI_DEPENDENCY_MAX_AGE) ||
-      !cali_dependency_recent(RM_IMU_TOE, now, AUTO_GIMBAL_CALI_DEPENDENCY_MAX_AGE))
+  if (!cali_dependency_recent(YAW_GIMBAL_MOTOR_TOE, now, active_max_age))
   {
     gimbal_ready_tick = 0;
+    dbg_gimbal_cali_gate_state = DBG_GIMBAL_CALI_GATE_WAIT_YAW_FEEDBACK;
+    update_gimbal_cali_debug_snapshot(now, gimbal_ready_tick, active_max_age, active_stable_time);
+    return;
+  }
+
+  if (!cali_dependency_recent(PITCH_GIMBAL_MOTOR_TOE, now, active_max_age))
+  {
+    gimbal_ready_tick = 0;
+    dbg_gimbal_cali_gate_state = DBG_GIMBAL_CALI_GATE_WAIT_PITCH_FEEDBACK;
+    update_gimbal_cali_debug_snapshot(now, gimbal_ready_tick, active_max_age, active_stable_time);
+    return;
+  }
+
+  if (!cali_dependency_recent(RM_IMU_TOE, now, active_max_age))
+  {
+    gimbal_ready_tick = 0;
+    dbg_gimbal_cali_gate_state = DBG_GIMBAL_CALI_GATE_WAIT_IMU_FEEDBACK;
+    update_gimbal_cali_debug_snapshot(now, gimbal_ready_tick, active_max_age, active_stable_time);
     return;
   }
 
   if (gimbal_ready_tick == 0)
   {
     gimbal_ready_tick = now;
+    dbg_gimbal_cali_gate_state = DBG_GIMBAL_CALI_GATE_WAIT_STABLE_WINDOW;
+    update_gimbal_cali_debug_snapshot(now, gimbal_ready_tick, active_max_age, active_stable_time);
     return;
   }
 
-  if ((now - gimbal_ready_tick) < AUTO_GIMBAL_CALI_READY_STABLE_TIME)
+  if ((now - gimbal_ready_tick) < active_stable_time)
   {
+    dbg_gimbal_cali_gate_state = DBG_GIMBAL_CALI_GATE_WAIT_STABLE_WINDOW;
+    update_gimbal_cali_debug_snapshot(now, gimbal_ready_tick, active_max_age, active_stable_time);
     return;
   }
 
@@ -589,6 +651,55 @@ static void auto_start_gimbal_calibrate(void)
   gimbal_auto_cali_pending = 0;
   gimbal_host_cali_pending = 0;
   gimbal_ready_tick = 0;
+  dbg_gimbal_cali_gate_state = DBG_GIMBAL_CALI_GATE_RUNNING;
+  update_gimbal_cali_debug_snapshot(now, gimbal_ready_tick, active_max_age, active_stable_time);
+}
+
+static uint32_t cali_dependency_age_ms(uint8_t toe, uint32_t now)
+{
+  const error_t *error_list_point = get_error_list_point();
+
+  if (error_list_point == NULL || toe >= ERROR_LIST_LENGHT)
+  {
+    return 0xFFFFFFFFU;
+  }
+
+  if (error_list_point[toe].enable == 0)
+  {
+    return 0xFFFFFFFEU;
+  }
+
+  if (!detect_has_real_update(toe))
+  {
+    return 0xFFFFFFFFU;
+  }
+
+  return now - error_list_point[toe].new_time;
+}
+
+static void update_gimbal_cali_debug_snapshot(uint32_t now, uint32_t ready_tick, uint32_t active_max_age, uint32_t active_stable_time)
+{
+  dbg_gimbal_cali_now_tick = now;
+  dbg_gimbal_cali_ready_tick = ready_tick;
+  dbg_gimbal_cali_ready_elapsed_ms = (ready_tick == 0U) ? 0U : (now - ready_tick);
+  dbg_gimbal_cali_dependency_max_age_ms = active_max_age;
+  dbg_gimbal_cali_stable_time_ms = active_stable_time;
+
+  dbg_gimbal_cali_host_pending = (gimbal_host_cali_pending != 0U) ? 1U : 0U;
+  dbg_gimbal_cali_auto_pending = (gimbal_auto_cali_pending != 0U) ? 1U : 0U;
+  dbg_gimbal_cali_pending = ((gimbal_host_cali_pending != 0U) || (gimbal_auto_cali_pending != 0U)) ? 1U : 0U;
+  dbg_gimbal_cali_cmd = (cali_sensor[CALI_GIMBAL].cali_cmd != 0U) ? 1U : 0U;
+  dbg_gimbal_cali_running = dbg_gimbal_cali_cmd;
+  dbg_gimbal_cali_valid = (cali_sensor[CALI_GIMBAL].cali_done == CALIED_FLAG) ? 1U : 0U;
+  dbg_gimbal_cali_block_nav_fresh = ros_nav_cmd_fresh() ? 1U : 0U;
+
+  dbg_gimbal_cali_yaw_age_ms = cali_dependency_age_ms(YAW_GIMBAL_MOTOR_TOE, now);
+  dbg_gimbal_cali_pitch_age_ms = cali_dependency_age_ms(PITCH_GIMBAL_MOTOR_TOE, now);
+  dbg_gimbal_cali_imu_age_ms = cali_dependency_age_ms(RM_IMU_TOE, now);
+
+  dbg_gimbal_cali_yaw_recent = (dbg_gimbal_cali_yaw_age_ms <= active_max_age) ? 1U : 0U;
+  dbg_gimbal_cali_pitch_recent = (dbg_gimbal_cali_pitch_age_ms <= active_max_age) ? 1U : 0U;
+  dbg_gimbal_cali_imu_recent = (dbg_gimbal_cali_imu_age_ms <= active_max_age) ? 1U : 0U;
 }
 
 static bool_t cali_dependency_recent(uint8_t toe, uint32_t now, uint32_t max_age)
@@ -601,6 +712,11 @@ static bool_t cali_dependency_recent(uint8_t toe, uint32_t now, uint32_t max_age
   }
 
   if (error_list_point[toe].enable == 0)
+  {
+    return 0;
+  }
+
+  if (!detect_has_real_update(toe))
   {
     return 0;
   }

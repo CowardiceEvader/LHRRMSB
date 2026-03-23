@@ -27,7 +27,8 @@
 #define CMD_HEARTBEAT           0x10U   /*  0 bytes payload */
 
 /* --- STM32 -> ROS (upstream) --- */
-#define CMD_STATUS_REPORT       0x81U   /* 21 bytes payload */
+#define CMD_STATUS_REPORT       0x81U   /* 72 bytes payload */
+#define ROS_STATUS_REPORT_PAYLOAD_LEN 72U
 
 #define ROS_FRAME_MAX_PAYLOAD   32U     /* max payload we accept */
 #define ROS_FRAME_OVERHEAD      5U      /* SOF_H + SOF_L + CMD + LEN + CRC */
@@ -75,8 +76,8 @@ typedef struct
     uint32_t timestamp_ms;  /* upper-computer monotonic timestamp */
 } ros_nav_cmd_t;
 
-/* --- CMD_STATUS_REPORT (0x81) payload: 21 bytes --- */
-typedef struct
+/* --- CMD_STATUS_REPORT (0x81) payload: 72 bytes --- */
+typedef __packed struct
 {
     uint16_t    hp;
     float       yaw_abs;            /* rad */
@@ -87,6 +88,27 @@ typedef struct
     uint32_t    last_nav_timestamp_ms;
     uint16_t    nav_age_ms;
     uint8_t     status_flags;
+    uint32_t    dbg_gimbal_cali_request_count;
+    uint32_t    dbg_gimbal_cali_last_req_tick;
+    uint32_t    dbg_gimbal_cali_now_tick;
+    uint32_t    dbg_gimbal_cali_ready_tick;
+    uint32_t    dbg_gimbal_cali_ready_elapsed_ms;
+    uint32_t    dbg_gimbal_cali_yaw_age_ms;
+    uint32_t    dbg_gimbal_cali_pitch_age_ms;
+    uint32_t    dbg_gimbal_cali_imu_age_ms;
+    uint32_t    dbg_gimbal_cali_dependency_max_age_ms;
+    uint32_t    dbg_gimbal_cali_stable_time_ms;
+    uint8_t     dbg_gimbal_cali_gate_state;
+    uint8_t     dbg_gimbal_cali_host_pending;
+    uint8_t     dbg_gimbal_cali_auto_pending;
+    uint8_t     dbg_gimbal_cali_pending;
+    uint8_t     dbg_gimbal_cali_running;
+    uint8_t     dbg_gimbal_cali_valid;
+    uint8_t     dbg_gimbal_cali_cmd;
+    uint8_t     dbg_gimbal_cali_block_nav_fresh;
+    uint8_t     dbg_gimbal_cali_yaw_recent;
+    uint8_t     dbg_gimbal_cali_pitch_recent;
+    uint8_t     dbg_gimbal_cali_imu_recent;
 } ros_status_report_t;
 
 /* ======================== public API ======================== */

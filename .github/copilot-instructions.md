@@ -66,7 +66,7 @@ This guide defines how AI agents should modify the LHRRMSB Sentinel firmware saf
 
 - UART1 upstream status feedback must use framed packets (`CMD_STATUS_REPORT = 0x81`) instead of raw bytes.
 - Upstream frame (STM32 -> ROS) format is the same `SOF + CMD + LEN + payload + CRC8` format.
-- `CMD_STATUS_REPORT (0x81, LEN=21)` payload currently contains:
+- `CMD_STATUS_REPORT (0x81, LEN=72)` payload currently contains:
   - `[0..1]`: robot HP (`uint16`, little-endian)
   - `[2..5]`: yaw absolute angle (`float`, little-endian)
   - `[6..9]`: pitch absolute angle (`float`, little-endian)
@@ -76,8 +76,30 @@ This guide defines how AI agents should modify the LHRRMSB Sentinel firmware saf
   - `[14..17]`: last parsed NAV timestamp from upper computer (`uint32`, little-endian)
   - `[18..19]`: NAV command age in milliseconds on STM32 (`uint16`, little-endian)
   - `[20]`: status flags (`uint8`) where bit0=`NAV_FRESH`, bit1=`VISION_ONLINE`, bit2=`REFEREE_ONLINE`, bit3=`HEAT_BLOCKED`, bit4=`GIMBAL_HOLD`, bit5=`GIMBAL_CALI`, bit6=`GIMBAL_CALI_VALID`, bit7=`GIMBAL_CALI_RUNNING`
+  - `[21..24]`: `dbg_gimbal_cali_request_count` (`uint32`, little-endian)
+  - `[25..28]`: `dbg_gimbal_cali_last_req_tick` (`uint32`, little-endian)
+  - `[29..32]`: `dbg_gimbal_cali_now_tick` (`uint32`, little-endian)
+  - `[33..36]`: `dbg_gimbal_cali_ready_tick` (`uint32`, little-endian)
+  - `[37..40]`: `dbg_gimbal_cali_ready_elapsed_ms` (`uint32`, little-endian)
+  - `[41..44]`: `dbg_gimbal_cali_yaw_age_ms` (`uint32`, little-endian)
+  - `[45..48]`: `dbg_gimbal_cali_pitch_age_ms` (`uint32`, little-endian)
+  - `[49..52]`: `dbg_gimbal_cali_imu_age_ms` (`uint32`, little-endian)
+  - `[53..56]`: `dbg_gimbal_cali_dependency_max_age_ms` (`uint32`, little-endian)
+  - `[57..60]`: `dbg_gimbal_cali_stable_time_ms` (`uint32`, little-endian)
+  - `[61]`: `dbg_gimbal_cali_gate_state` (`uint8`)
+  - `[62]`: `dbg_gimbal_cali_host_pending` (`uint8`)
+  - `[63]`: `dbg_gimbal_cali_auto_pending` (`uint8`)
+  - `[64]`: `dbg_gimbal_cali_pending` (`uint8`)
+  - `[65]`: `dbg_gimbal_cali_running` (`uint8`)
+  - `[66]`: `dbg_gimbal_cali_valid` (`uint8`)
+  - `[67]`: `dbg_gimbal_cali_cmd` (`uint8`)
+  - `[68]`: `dbg_gimbal_cali_block_nav_fresh` (`uint8`)
+  - `[69]`: `dbg_gimbal_cali_yaw_recent` (`uint8`)
+  - `[70]`: `dbg_gimbal_cali_pitch_recent` (`uint8`)
+  - `[71]`: `dbg_gimbal_cali_imu_recent` (`uint8`)
 - Current implementation sends this frame approximately every `50 ms` from `vision_rx_task`.
 - The reported yaw/pitch values come from the active single-gimbal motor feedback (`get_yaw_motor_point()` / `get_pitch_motor_point()`), not from any dual-gimbal path.
+- Calibration startup freshness must be based on real post-boot `detect_hook(...)` updates, not only `detect_init()` timestamps; if a device has not received any real update yet, its calibration dependency is not considered recent.
 
 ## 6. Debugging Practices
 
