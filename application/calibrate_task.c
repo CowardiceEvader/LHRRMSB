@@ -170,6 +170,16 @@ static bool_t cali_data_verify(void);
 static bool_t gimbal_flash_cali_data_valid(const gimbal_cali_t *cali);
 
 /**
+  * @brief          judge whether a dependency has provided data recently enough
+  *                 for calibration startup.
+  * @param[in]      toe: detect_task index
+  * @param[in]      now: current tick
+  * @param[in]      max_age: max allowed age in ticks/ms
+  * @retval         1: recent data exists 0: no recent data
+  */
+static bool_t cali_dependency_recent(uint8_t toe, uint32_t now, uint32_t max_age);
+
+/**
   * @brief          automatically request gimbal calibration once after boot when
   *                 no valid gimbal calibration data exists in flash.
   * @param[in]      none
@@ -543,10 +553,12 @@ static void auto_start_gimbal_calibrate(void)
     return;
   }
 
+#if AUTO_GIMBAL_CALI_START_DELAY > 0
   if (now < AUTO_GIMBAL_CALI_START_DELAY)
   {
     return;
   }
+#endif
 
   if (ros_nav_cmd_fresh())
   {
@@ -554,7 +566,9 @@ static void auto_start_gimbal_calibrate(void)
     return;
   }
 
-  if (toe_is_error(YAW_GIMBAL_MOTOR_TOE) || toe_is_error(PITCH_GIMBAL_MOTOR_TOE) || toe_is_error(RM_IMU_TOE))
+  if (!cali_dependency_recent(YAW_GIMBAL_MOTOR_TOE, now, AUTO_GIMBAL_CALI_DEPENDENCY_MAX_AGE) ||
+      !cali_dependency_recent(PITCH_GIMBAL_MOTOR_TOE, now, AUTO_GIMBAL_CALI_DEPENDENCY_MAX_AGE) ||
+      !cali_dependency_recent(RM_IMU_TOE, now, AUTO_GIMBAL_CALI_DEPENDENCY_MAX_AGE))
   {
     gimbal_ready_tick = 0;
     return;
@@ -575,6 +589,23 @@ static void auto_start_gimbal_calibrate(void)
   gimbal_auto_cali_pending = 0;
   gimbal_host_cali_pending = 0;
   gimbal_ready_tick = 0;
+}
+
+static bool_t cali_dependency_recent(uint8_t toe, uint32_t now, uint32_t max_age)
+{
+  const error_t *error_list_point = get_error_list_point();
+
+  if (error_list_point == NULL || toe >= ERROR_LIST_LENGHT)
+  {
+    return 0;
+  }
+
+  if (error_list_point[toe].enable == 0)
+  {
+    return 0;
+  }
+
+  return ((now - error_list_point[toe].new_time) <= max_age) ? 1 : 0;
 }
 
 static bool_t gimbal_flash_cali_data_valid(const gimbal_cali_t *cali)

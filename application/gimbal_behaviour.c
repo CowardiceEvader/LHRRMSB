@@ -630,26 +630,80 @@ static void gimbal_cali_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *gimbal
         return;
     }
     static uint16_t cali_time = 0;
+    static uint16_t direction_confirm_time = 0;
+    static uint8_t last_step = 0;
+    static uint8_t pitch_move_confirmed = 0;
+    static uint8_t pitch_direction_retry_used = 0;
+    static fp32 pitch_step_start_angle = 0.0f;
+    static fp32 pitch_cali_sign = GIMBAL_CALI_PITCH_SIGN;
+
+    if (gimbal_control_set->gimbal_cali.step != last_step)
+    {
+        cali_time = 0;
+        direction_confirm_time = 0;
+        pitch_move_confirmed = 0;
+        pitch_direction_retry_used = 0;
+        pitch_step_start_angle = gimbal_control_set->gimbal_pitch_motor.absolute_angle;
+        if (gimbal_control_set->gimbal_cali.step == GIMBAL_CALI_PITCH_MAX_STEP)
+        {
+            pitch_cali_sign = GIMBAL_CALI_PITCH_SIGN;
+        }
+        last_step = gimbal_control_set->gimbal_cali.step;
+    }
 
     if (gimbal_control_set->gimbal_cali.step == GIMBAL_CALI_PITCH_MAX_STEP)
     {
-
-        *pitch = GIMBAL_CALI_MOTOR_SET;
+        *pitch = pitch_cali_sign * GIMBAL_CALI_MOTOR_SET;
         *yaw = 0;
 
-        //�ж����������ݣ� ����¼�����С�Ƕ�����
-        gimbal_cali_gyro_judge(gimbal_control_set->gimbal_pitch_motor.motor_gyro, cali_time, gimbal_control_set->gimbal_cali.max_pitch,
-                               gimbal_control_set->gimbal_pitch_motor.absolute_angle, gimbal_control_set->gimbal_cali.max_pitch_ecd,
-                               gimbal_control_set->gimbal_pitch_motor.gimbal_motor_measure->ecd, gimbal_control_set->gimbal_cali.step);
+        if (!pitch_move_confirmed)
+        {
+            if (fabs(gimbal_control_set->gimbal_pitch_motor.absolute_angle - pitch_step_start_angle) >= GIMBAL_CALI_MIN_MOVE_ANGLE)
+            {
+                pitch_move_confirmed = 1;
+                direction_confirm_time = 0;
+            }
+            else if (!pitch_direction_retry_used)
+            {
+                direction_confirm_time++;
+                if (direction_confirm_time > GIMBAL_CALI_DIRECTION_CONFIRM_TIME)
+                {
+                    pitch_cali_sign = -pitch_cali_sign;
+                    pitch_direction_retry_used = 1;
+                    direction_confirm_time = 0;
+                    cali_time = 0;
+                    pitch_step_start_angle = gimbal_control_set->gimbal_pitch_motor.absolute_angle;
+                }
+            }
+        }
+
+        if (pitch_move_confirmed)
+        {
+            //�ж����������ݣ� ����¼�����С�Ƕ�����
+            gimbal_cali_gyro_judge(gimbal_control_set->gimbal_pitch_motor.motor_gyro, cali_time, gimbal_control_set->gimbal_cali.max_pitch,
+                                   gimbal_control_set->gimbal_pitch_motor.absolute_angle, gimbal_control_set->gimbal_cali.max_pitch_ecd,
+                                   gimbal_control_set->gimbal_pitch_motor.gimbal_motor_measure->ecd, gimbal_control_set->gimbal_cali.step);
+        }
     }
     else if (gimbal_control_set->gimbal_cali.step == GIMBAL_CALI_PITCH_MIN_STEP)
     {
-        *pitch = -GIMBAL_CALI_MOTOR_SET;
+        *pitch = -pitch_cali_sign * GIMBAL_CALI_MOTOR_SET;
         *yaw = 0;
 
-        gimbal_cali_gyro_judge(gimbal_control_set->gimbal_pitch_motor.motor_gyro, cali_time, gimbal_control_set->gimbal_cali.min_pitch,
-                               gimbal_control_set->gimbal_pitch_motor.absolute_angle, gimbal_control_set->gimbal_cali.min_pitch_ecd,
-                               gimbal_control_set->gimbal_pitch_motor.gimbal_motor_measure->ecd, gimbal_control_set->gimbal_cali.step);
+        if (!pitch_move_confirmed)
+        {
+            if (fabs(gimbal_control_set->gimbal_pitch_motor.absolute_angle - pitch_step_start_angle) >= GIMBAL_CALI_MIN_MOVE_ANGLE)
+            {
+                pitch_move_confirmed = 1;
+            }
+        }
+
+        if (pitch_move_confirmed)
+        {
+            gimbal_cali_gyro_judge(gimbal_control_set->gimbal_pitch_motor.motor_gyro, cali_time, gimbal_control_set->gimbal_cali.min_pitch,
+                                   gimbal_control_set->gimbal_pitch_motor.absolute_angle, gimbal_control_set->gimbal_cali.min_pitch_ecd,
+                                   gimbal_control_set->gimbal_pitch_motor.gimbal_motor_measure->ecd, gimbal_control_set->gimbal_cali.step);
+        }
     }
     else if (gimbal_control_set->gimbal_cali.step == GIMBAL_CALI_YAW_MAX_STEP)
     {
@@ -673,6 +727,10 @@ static void gimbal_cali_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *gimbal
     else if (gimbal_control_set->gimbal_cali.step == GIMBAL_CALI_END_STEP)
     {
         cali_time = 0;
+      direction_confirm_time = 0;
+      pitch_move_confirmed = 0;
+      pitch_direction_retry_used = 0;
+      pitch_cali_sign = GIMBAL_CALI_PITCH_SIGN;
     }
 }
 

@@ -249,12 +249,14 @@
 ### 3.3.4 当前实现语义
 
 - 当 payload[0] = `0x01` 时，下位机会登记一条云台校准请求
-- 真正开始校准前仍要求：
-  - yaw / pitch 电机在线
-  - IMU 在线
+  - 注意：这只是**触发请求**，不是让上位机接管扫位执行
+  - 真正开始校准前仍要求：
+    - yaw / pitch 电机最近持续有反馈
+    - IMU 解算最近持续有输出
   - 启动延迟已过
   - 当前没有新鲜 `CMD_NAV_DATA`
 - 校准期间云台行为切到 `GIMBAL_CALI`
+- 实际的 pitch/yaw 扫位、限位判定、Flash 写回都仍由下位机本地完成
 - 若当前云台标定无效但校准尚未开始，则保持 `ZERO_FORCE`
 
 ### 3.3.5 推荐上位机流程
@@ -309,8 +311,9 @@ $$2 + 1 + 1 + 21 + 1 = 26 \text{ byte}$$
 | 2 | `ROS_STATUS_REFEREE_ONLINE` | `0x04` | `REFEREE_TOE` 在线 |
 | 3 | `ROS_STATUS_HEAT_BLOCKED` | `0x08` | 当前因热量限制不允许发射 |
 | 4 | `ROS_STATUS_GIMBAL_HOLD` | `0x10` | 当前未使用新鲜 NAV 目标，云台处于本地保持位姿状态 |
-| 5 | `ROS_STATUS_GIMBAL_CALI` | `0x20` | 当前云台校准等待中或执行中 |
+| 5 | `ROS_STATUS_GIMBAL_CALI` | `0x20` | 当前云台校准等待中或执行中（兼容旧语义） |
 | 6 | `ROS_STATUS_GIMBAL_CALI_VALID` | `0x40` | 当前已存在通过固件有效性检查的云台校准数据 |
+| 7 | `ROS_STATUS_GIMBAL_CALI_RUNNING` | `0x80` | 当前云台校准已真正进入扫位执行阶段 |
 
 ### 4.1.5 字段解释
 
@@ -373,7 +376,8 @@ STM32 视角下，距离最近一次收到 `CMD_NAV_DATA` 已经过了多久。
 
 建议上位机联调时这样理解：
 
-- `GIMBAL_CALI=1, GIMBAL_CALI_VALID=0`：正在等待或执行校准
+- `GIMBAL_CALI=1, GIMBAL_CALI_RUNNING=0, GIMBAL_CALI_VALID=0`：请求已登记，但还在等待 ready 条件
+- `GIMBAL_CALI=1, GIMBAL_CALI_RUNNING=1, GIMBAL_CALI_VALID=0`：已经真正进入扫位执行阶段
 - `GIMBAL_CALI=0, GIMBAL_CALI_VALID=1`：已有有效校准数据，当前可正常保持
 - `GIMBAL_CALI=0, GIMBAL_CALI_VALID=0`：当前没有有效校准数据，需继续排查在线条件或主动触发校准
 

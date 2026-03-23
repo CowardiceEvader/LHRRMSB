@@ -166,6 +166,10 @@ static void ros_send_status_report(void)
     {
         status_flags |= ROS_STATUS_GIMBAL_CALI;
     }
+    if (gimbal_calibration_is_running())
+    {
+        status_flags |= ROS_STATUS_GIMBAL_CALI_RUNNING;
+    }
     if (gimbal_calibration_is_valid())
     {
         status_flags |= ROS_STATUS_GIMBAL_CALI_VALID;

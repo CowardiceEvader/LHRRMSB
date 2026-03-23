@@ -167,6 +167,7 @@
 #define AUTO_GIMBAL_CALI_ENABLE             1
 #define AUTO_GIMBAL_CALI_START_DELAY        0
 #define AUTO_GIMBAL_CALI_READY_STABLE_TIME  100
+#define AUTO_GIMBAL_CALI_DEPENDENCY_MAX_AGE 20
 
 //cali device name
 typedef enum
